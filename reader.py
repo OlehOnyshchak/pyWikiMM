@@ -445,7 +445,7 @@ def _query_img_captions_from_preview(
             ]
             if len(res) != 1:
                 if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
-                    ' removed intentionally or cache is outdated'.format(page_id, fileimg_idname))
+                    ' removed intentionally or cache is outdated'.format(page_id, img_id))
                 continue
             
             i = res[0]
