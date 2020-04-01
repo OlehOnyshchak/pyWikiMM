@@ -6,6 +6,7 @@ import urllib
 import re
 import shutil
 import time
+import urllib.request
 
 from pathlib import Path
 from pywikibot import pagegenerators
@@ -19,9 +20,6 @@ from typing import Optional
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from urllib.parse import unquote
-
-# for fetch_meta_captions_fast
-import urllib.request
 from bs4 import BeautifulSoup
 
 KNOWN_ICONS = [
@@ -363,9 +361,9 @@ def _get_image_captions(page_url, language_code, debug_info):
         res.append((filename, div.text))
     return res
 
-def _parse_caption_with_js(driver, language_code, page_id, img_id, debug_info):
+def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_info):
     caption = None
-    if img_id in KNOWN_ICONS:
+    if img_id in KNOWN_ICONS or img_id in icons:
         if debug_info: print('Skipping known icon', img_id)
         return caption
 
@@ -454,7 +452,7 @@ def _query_img_captions_from_preview(
                 continue
             
             caption = _parse_caption_with_js(
-                driver, language_code, page_id, img_id, debug_info
+                driver, language_code, page_id, img_id, icons, debug_info
             )
 
             if caption is None: icons.add(img_id)
@@ -527,15 +525,87 @@ def _query_img_captions_from_article(
                 
         _dump(meta_path, json.dumps({"img_meta": meta_arr}))
 
+def _is_valid_img_src(img_src, lang):
+    special_img = '//{}.wikipedia.org/wiki/Special:CentralAutoLogin/start?type=1x1'.format(lang)
+    # TODO: check if we can or need to work out with maps
+    return img_src != special_img and not img_src.startswith('https://maps.wikimedia.org')
 
-#########################################################################################################
+def _get_img_name(img_src, lang):
+    COMMONS_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/thumb/'
+    WIKI_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/thumb/'.format(lang)
+    WIKI_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/'.format(lang)
+    STATIC_IMG_SRC = '/static/images/'
+    
+    hash_len = len('e/e7/')
+    def _get_img_name_common(offset):
+        img_name = img_src[offset:]
+        if '/'in img_name:
+            img_name = img_name[:img_name.index('/')]
+        return img_name
+    
+    offset = None
+    if img_src.startswith(COMMONS_IMG_SRC):
+        offset = len(COMMONS_IMG_SRC) + hash_len
+    elif img_src.startswith(WIKI_IMG_SRC):
+        offset = len(WIKI_IMG_SRC) + hash_len
+    elif img_src.startswith(WIKI_NO_THUMB_IMG_SRC):
+        offset = len(WIKI_NO_THUMB_IMG_SRC) + hash_len
+    elif img_src.startswith(STATIC_IMG_SRC):
+        offset = len(STATIC_IMG_SRC)
+    else:
+        raise Exception("ERROR: unknown img_src format:", img_src)
+        
+    return unquote(_get_img_name_common(offset))
+
+def _get_heading_text(tag_element):
+    text = tag_element.text.strip()
+    # TODO: fix translation with edit
+    return text[:-len('[edit]')] if text.endswith('[edit]') else text
+
+def _get_headings(tag_element):
+    res = []
+    arr = [
+        (x.name, _get_heading_text(x))
+        for x in tag_element.find_all_previous(re.compile('h[1-6]'))
+    ]
+    tagname_arr = [x for x, _ in arr]
+    for i in range(1, 7):
+        tag = 'h{}'.format(i)
+        if tag not in tagname_arr:
+            continue
+    
+        parent_index = tagname_arr.index(tag)
+        res.append(arr[parent_index][1])
+        tagname_arr = tagname_arr[:parent_index]
+        
+    return res
+
+def _get_image_headings(page_url, lang):
+    response = urllib.request.urlopen(page_url)
+    page_html = response.read()
+    soup = BeautifulSoup(page_html, 'html.parser')
+    
+    res = {}
+    for x in soup.findAll("img"):
+        img_src = x.get('src')
+        if not _is_valid_img_src(img_src, lang):
+            continue
+        
+        img_name = _get_translated_file_label(lang) + _get_img_name(img_src, lang)
+        res[img_name] = _get_headings(x)
+    
+    return res
+
+
+################################################################################
 # Public Interface
-#########################################################################################################
+################################################################################
 
 @dataclass
 class QueryParams:
-    # specifies directory to download dataset. If it already contains part of dataset, that
-    # part will be skipped unless you explicitly specify with parameters to invalidate the cache
+    # specifies directory to download dataset. If it already contains part of
+    # a dataset, that part will be skipped unless you explicitly specify with
+    # parameters to invalidate the cache
     out_dir: str = '../data/'
 
     # if True, will print a lot of verbose information about the progress
@@ -554,27 +624,24 @@ class QueryParams:
     # skip already downloaded images and will also delete obsolete cached images
     invalidate_img_meta_cache: bool = False
 
-    # if True, will check whether actual list of article images matched the cached one. If not, will
-    # proceed with this particular meta.json as if @invalidate_img_meta_cache=True
-    # Consecuently, has no affect when @invalidate_img_meta_cache=True already
+    # if True, will check whether actual list of article images matched the
+    # cached one. If not, will proceed with this particular meta.json as if
+    # @invalidate_img_meta_cache=True. Consecuently, has no affect when 
+    # @invalidate_img_meta_cache=True already
     invalidate_oudated_img_meta_cache: bool = False
 
-    # if True, will remove all cached text.json, i.e. textual content of the article
+    # if True, will remove all cached text.json, i.e. textual content of
+    # the article
     invalidate_text_cache: bool = False
 
-    # if True and any @invalidate_*_cache parameter is also True, will iterate over 
-    # only downloaded articles from the @filename list specified and update them
+    # if True and any @invalidate_*_cache parameter is also True, will iterate 
+    # over only downloaded articles from the @filename list specified and
+    # update them
     only_update_cached_pages: bool = False
 
-    # code of Wikipedia language, articles of which specified in @filename list. All articles
-    # in @filename should be from a single wikipedia.
+    # code of Wikipedia language, articles of which specified in @filename list.
+    # All articles in @filename should be from a single wikipedia.
     language_code: str = 'en'
-        
-def query_size(filename: str):
-    site = pywikibot.Site()
-    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
-    
-    return len(pages)
 
 def query(filename: str, params: QueryParams) -> None:   
     site = pywikibot.Site(params.language_code)    
@@ -691,3 +758,59 @@ def query_img_captions(
         invalidate_cache=False,
         debug_info=debug_info
     )
+
+# Queries image headings from the article. That is, updates @headings field of
+# image metadata, which is a list containing all available headings from h1 to h6
+# TODO: move dublicated code from here and query_img_captions into common routine
+# TODO: optimise so that we query only images present in meta.json, not all of them
+def query_img_headings(
+    filename,
+    out_dir,
+    offset=0,
+    limit=None,
+    language_code='en',
+    invalidate_cache=False,
+    debug_info=False
+):
+    site = pywikibot.Site(language_code)    
+    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
+    limit = _validated_limit(limit, offset, len(pages))
+    
+    for i in range(offset, offset + limit):
+        p = pages[i]
+        if p.pageid == 0:
+            print("\nERROR: Cannot fetch the page " + p.title())
+            continue
+        
+        page_dir = _get_path(out_dir + p.title(as_filename=True).rstrip('.'), create_if_not_exists=False)
+        if not page_dir.exists():
+            print('\nArticle "{}" is missing from expected path={}'.format(p.title(), page_dir))
+            continue
+    
+        if debug_info: print(i, page_dir)        
+        meta_path = join(page_dir, 'img', 'meta.json')
+        meta_arr = _getJSON(meta_path)['img_meta']
+
+        if invalidate_cache:
+            for m in meta_arr:
+                m.pop('headings', None)
+        
+        text_path = join(page_dir, 'text.json')
+        article_url = _getJSON(text_path)['url']
+        
+        image_headings = _get_image_headings(article_url, language_code)
+        for filename, headings in image_headings.items():
+            if not _valid_img_type(filename): continue
+            if len(headings) == 0: continue
+            
+            res = [i for i, x in enumerate(meta_arr) if unquote(x['url']).split('/wiki/')[-1] == filename]
+            if len(res) != 1:
+                if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
+                    ' removed intentionally or cache is outdated'.format(page_dir, filename))
+                continue
+
+            # TODO: not update when invalidate_cache=False even though we already queried
+            i = res[0]
+            meta_arr[i]['headings'] = headings
+                
+        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
