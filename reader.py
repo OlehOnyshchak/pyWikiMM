@@ -559,8 +559,11 @@ def _get_img_name(img_src, lang):
 
 def _get_heading_text(tag_element):
     text = tag_element.text.strip()
-    # TODO: fix translation with edit
-    return text[:-len('[edit]')] if text.endswith('[edit]') else text
+    # TODO: check if that could be done more reliable and whether nested brackets
+    # are possible
+    if text[-1] == ']' and '[' in text:
+        text = text[:text.rfind('[')]
+    return text
 
 def _get_headings(tag_element):
     res = []
