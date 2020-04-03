@@ -3,6 +3,7 @@ import numpy as np
 import string
 import json
 import shutil
+import re
 import os
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from os.path import isfile, isdir, join, exists, abspath
 from keras.preprocessing import image
 from keras.applications.resnet import ResNet152, preprocess_input
 from sklearn.model_selection import train_test_split
+from redditscore.tokenizer import CrazyTokenizer
 
 def _getJSON(path):
     with open(path) as json_file:
@@ -43,7 +45,12 @@ def _get_image_features(model, img_path):
 ################################################################################
 
 def generate_visual_features(
-    data_path, offset=0, limit=None, model=None, debug_info=False
+    data_path,
+    offset=0,
+    limit=None,
+    model=None,
+    invalidate_cache=False,
+    debug_info=False
 ):
     article_paths = [
         join(data_path, f) 
@@ -61,8 +68,8 @@ def generate_visual_features(
         meta_path = join(path, 'img/', 'meta.json')
         meta_arr = _getJSON(meta_path)['img_meta']
         for meta in meta_arr:
-            if 'features' in meta: continue
-            if meta['filename'][-4:].lower() != ".jpg": continue
+            if 'features' in meta and not invalidate_cache: 
+                continue
                 
             img_path =  join(path, 'img/', meta['filename'])
             try:
@@ -99,3 +106,43 @@ def filter_img_metadata(
                 
         _dump(meta_path, json.dumps({"img_meta": meta_arr_filtered}))
 
+def parse_image_titles(
+    data_path, offset=0, limit=None, invalidate_cache=False, debug_info=False
+):
+    article_paths = [
+        join(data_path, f) 
+        for f in listdir(data_path) if isdir(join(data_path, f))
+    ]
+    
+    limit = limit if limit else len(article_paths) - offset
+    limit = min(limit, len(article_paths) - offset)
+    
+    tokenizer = CrazyTokenizer(hashtags='split')
+    mapper = str.maketrans({x: '' for x in string.punctuation})
+    regex = re.compile(r'(\d+)')
+
+    for i in range(offset, offset + limit):
+        path = article_paths[i]
+        if debug_info: print(i, path)
+    
+        meta_path = join(path, 'img/', 'meta.json')
+        meta_arr = _getJSON(meta_path)['img_meta']
+        for meta in meta_arr:
+            if 'parsed_title' in meta and not invalidate_cache:
+                continue
+                
+            filename = os.path.splitext(meta['title'])[0]
+            sentence = filename.translate(mapper)
+            sentence = regex.sub(r' \g<1> ', sentence)
+
+            tokens = []
+            for word in sentence.split():
+                tokens += (
+                    tokenizer.tokenize("#" + word) 
+                    if not word.isdigit() 
+                    else [word]
+                )
+            
+            meta['parsed_title'] = " ".join(tokens)
+                
+        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
