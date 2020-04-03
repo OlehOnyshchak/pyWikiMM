@@ -528,10 +528,18 @@ def _query_img_captions_from_article(
 def _is_valid_img_src(img_src, lang):
     special_img = '//{}.wikipedia.org/wiki/Special:CentralAutoLogin/start?type=1x1'.format(lang)
     # TODO: check if we can or need to work out with maps
-    return img_src != special_img and not img_src.startswith('https://maps.wikimedia.org')
+    return (
+        img_src != special_img
+        and not img_src.startswith('https://maps.wikimedia.org')
+        and not img_src.startswith('https://wikimedia.org/api/rest_v1/media/math/render/svg/')
+        and not img_src.startswith('/api/rest_v1/page/graph/')
+        and not img_src.startswith('/w/extensions/')
+        and not img_src.startswith('//upload.wikimedia.org/score/')
+    )
 
 def _get_img_name(img_src, lang):
     COMMONS_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/thumb/'
+    COMMONS_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/'
     WIKI_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/thumb/'.format(lang)
     WIKI_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/'.format(lang)
     STATIC_IMG_SRC = '/static/images/'
@@ -546,6 +554,8 @@ def _get_img_name(img_src, lang):
     offset = None
     if img_src.startswith(COMMONS_IMG_SRC):
         offset = len(COMMONS_IMG_SRC) + hash_len
+    elif img_src.startswith(COMMONS_NO_THUMB_IMG_SRC):
+        offset = len(COMMONS_NO_THUMB_IMG_SRC) + hash_len
     elif img_src.startswith(WIKI_IMG_SRC):
         offset = len(WIKI_IMG_SRC) + hash_len
     elif img_src.startswith(WIKI_NO_THUMB_IMG_SRC):
@@ -808,8 +818,8 @@ def query_img_headings(
             
             res = [i for i, x in enumerate(meta_arr) if unquote(x['url']).split('/wiki/')[-1] == filename]
             if len(res) != 1:
-                if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
-                    ' removed intentionally or cache is outdated'.format(page_dir, filename))
+                # if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
+                #     ' removed intentionally or cache is outdated'.format(page_dir, filename))
                 continue
 
             # TODO: not update when invalidate_cache=False even though we already queried
