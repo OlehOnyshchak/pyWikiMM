@@ -83,3 +83,6 @@ description   | description of an image parsed from Wikimedia Commons page, if a
 caption       | caption of an image parsed from Wikipedia article, if available
 headings      | list of all nested headings of location where article is placed in Wikipedia article. The first element is top-most heading
 features      | output of 5-th convolutional layer of ResNet152 trained on ImageNet dataset. That output of shape (19, 24, 2048) is then max-pooled to a shape (2048,). Features taken from original images downloaded in `jpeg` format with fixed width of 600px. Practically, it is a list of floats with len = 2048
+
+## Further Reading
+This project was developed as a part of ["Image Recommendation for Wikipedia Articles"](http://dx.doi.org/10.13140/RG.2.2.17463.27042) thesis, so you can find more context as well as application of this downloader there.
