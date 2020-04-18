@@ -6,7 +6,9 @@ import shutil
 import re
 import os
 
-from utils import _getJSON, _dump, _get_translated_file_label, _valid_img_type
+from utils import (
+    _getJSON, _dump, _get_translated_file_label, _valid_img_type, _validated_limit
+)
 from bs4 import BeautifulSoup
 from pathlib import Path
 from os import listdir, mkdir
@@ -163,8 +165,7 @@ def generate_visual_features(
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = limit if limit else len(article_paths) - offset
-    limit = min(limit, len(article_paths) - offset)
+    limit = _validated_limit(limit, offset, len(article_paths))
     model = model if model else ResNet152(weights='imagenet', include_top=False) 
     
     for i in range(offset, offset + limit):
@@ -195,9 +196,7 @@ def filter_img_metadata(
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
 
-    limit = limit if limit else len(article_paths) - offset
-    limit = min(limit, len(article_paths) - offset)
-    
+    limit = _validated_limit(limit, offset, len(article_paths))
     for i in range(offset, offset + limit):
         path = article_paths[i]
         if debug_info: print(i, path)
@@ -220,9 +219,7 @@ def parse_image_titles(
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = limit if limit else len(article_paths) - offset
-    limit = min(limit, len(article_paths) - offset)
-    
+    limit = _validated_limit(limit, offset, len(article_paths))
     tokenizer = CrazyTokenizer(hashtags='split')
     mapper = str.maketrans({x: '' for x in string.punctuation})
     regex = re.compile(r'(\d+)')
@@ -269,9 +266,7 @@ def parse_image_headings(
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = limit if limit else len(article_paths) - offset
-    limit = min(limit, len(article_paths) - offset)
-
+    limit = _validated_limit(limit, offset, len(article_paths))
     for i in range(offset, offset + limit):
         path = article_paths[i]
         if debug_info: print(i, path)

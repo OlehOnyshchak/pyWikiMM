@@ -18,6 +18,10 @@ def _valid_img_type(img_name):
             return True
     return False
 
+def _validated_limit(limit, offset, list_len):
+    res = limit if limit else list_len - offset
+    return min(res, list_len - offset)
+
 def _get_translated_file_label(language_code):
     # to identify the correct translation, follow these steps:
     # 1) open some Wikipedia article in required language

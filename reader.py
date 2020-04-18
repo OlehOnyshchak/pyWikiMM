@@ -8,7 +8,9 @@ import shutil
 import time
 import urllib.request
 
-from utils import _getJSON, _dump, _get_translated_file_label, _valid_img_type
+from utils import (
+    _getJSON, _dump, _get_translated_file_label, _valid_img_type, _validated_limit
+)
 from pathlib import Path
 from pywikibot import pagegenerators
 from urllib.request import urlretrieve
@@ -287,10 +289,6 @@ def _img_download(img_links, page_dir, params, tc, uc):
 #     with open(filename, 'w') as f:
 #         for item in coll:
 #             f.write("%s\n" % item)
-            
-def _validated_limit(limit, offset, list_len):
-    res = limit if limit else list_len - offset
-    return min(res, list_len - offset)
 
 def _remove_prefix(text, prefix):
     if text.startswith(prefix):
