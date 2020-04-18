@@ -8,6 +8,7 @@ import shutil
 import time
 import urllib.request
 
+from utils import _getJSON, _dump, _get_translated_file_label, _valid_img_type
 from pathlib import Path
 from pywikibot import pagegenerators
 from urllib.request import urlretrieve
@@ -129,42 +130,6 @@ class _MyHTMLParser(HTMLParser):
 #     wikicode = mwp.parse(wiki_text)
 #     return wikicode.strip_code()
 
-def _get_translated_file_label(language_code):
-    # to identify the correct translation, follow these steps:
-    # 1) open some Wikipedia article in required language
-    # 2) click on any image to get a full-window preview
-    # 3) look-up on the url page in the browser. The required translation
-    #   would be just after the last "/", such as in this example it will be "Archivo:"
-    # https://es.wikipedia.org/wiki/A_Christmas_Carol#/media/Archivo:Charles.jpg
-    # Please note that you need to include semicolon (":") at the end as well
-    lang2label = {
-        'en': 'File:',
-        'uk': 'Файл:',
-        'es': 'Archivo:',
-        'de': 'Datei:',
-        'fr': 'Fichier:',
-        'pl': 'Plik:',
-        'it': 'File:',
-        'pt': 'Ficheiro:',
-        'ru': 'Файл:',
-        'ja': 'ファイル:',
-        'zh': 'File:',
-    }
-
-    if language_code not in lang2label:
-        raise Exception('{} language is currently unsupported. To fix this,'\
-            'please add corresponding translation to @lang2label dict above')
-
-    return lang2label[language_code]
-
-def _dump(path, data):
-    with open(path, 'w', encoding='utf8') as outfile:
-        json.dump(data, outfile, indent=2, ensure_ascii=False)
-        
-def _getJSON(path):
-    with open(path) as json_file:
-        return json.loads(json.load(json_file))
-
 def _get_path(out_dir, create_if_not_exists):
     requests_path = Path(out_dir)
     if not requests_path.exists() and create_if_not_exists:
@@ -202,15 +167,6 @@ def _get_img_path(img, img_dir):
     #     img_path_orig = Path(str(img_path) + "_" + Path(img_name).suffix + ".ORIGINAL")
         
     return img_name, img_path, img_path_orig
-
-def _valid_img_type(img_name):
-    valid_types = [
-        '.tif', '.tiff', '.jpg', '.jpeg', '.jpe', '.jif,', '.jfif', '.jfi',  '.gif', '.png', '.svg'
-    ]
-    for t in valid_types:
-        if img_name.lower().endswith(t):
-            return True
-    return False
 
 def _single_img_download(img, img_dir, debug_info):
     img_name, img_path, img_path_orig = _get_img_path(img, img_dir)
@@ -525,90 +481,6 @@ def _query_img_captions_from_article(
                 
         _dump(meta_path, json.dumps({"img_meta": meta_arr}))
 
-def _is_valid_img_src(img_src, lang):
-    special_img = '//{}.wikipedia.org/wiki/Special:CentralAutoLogin/start?type=1x1'.format(lang)
-    # TODO: check if we can or need to work out with maps
-    return (
-        img_src != special_img
-        and not img_src.startswith('https://maps.wikimedia.org')
-        and not img_src.startswith('https://wikimedia.org/api/rest_v1/media/math/render/svg/')
-        and not img_src.startswith('/api/rest_v1/page/graph/')
-        and not img_src.startswith('/w/extensions/')
-        and not img_src.startswith('//upload.wikimedia.org/score/')
-    )
-
-def _get_img_name(img_src, lang):
-    COMMONS_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/thumb/'
-    COMMONS_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/'
-    WIKI_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/thumb/'.format(lang)
-    WIKI_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/'.format(lang)
-    STATIC_IMG_SRC = '/static/images/'
-    
-    hash_len = len('e/e7/')
-    def _get_img_name_common(offset):
-        img_name = img_src[offset:]
-        if '/'in img_name:
-            img_name = img_name[:img_name.index('/')]
-        return img_name
-    
-    offset = None
-    if img_src.startswith(COMMONS_IMG_SRC):
-        offset = len(COMMONS_IMG_SRC) + hash_len
-    elif img_src.startswith(COMMONS_NO_THUMB_IMG_SRC):
-        offset = len(COMMONS_NO_THUMB_IMG_SRC) + hash_len
-    elif img_src.startswith(WIKI_IMG_SRC):
-        offset = len(WIKI_IMG_SRC) + hash_len
-    elif img_src.startswith(WIKI_NO_THUMB_IMG_SRC):
-        offset = len(WIKI_NO_THUMB_IMG_SRC) + hash_len
-    elif img_src.startswith(STATIC_IMG_SRC):
-        offset = len(STATIC_IMG_SRC)
-    else:
-        raise Exception("ERROR: unknown img_src format:", img_src)
-        
-    return unquote(_get_img_name_common(offset))
-
-def _get_heading_text(tag_element):
-    text = tag_element.text.strip()
-    # TODO: check if that could be done more reliable and whether nested brackets
-    # are possible
-    if text[-1] == ']' and '[' in text:
-        text = text[:text.rfind('[')]
-    return text
-
-def _get_headings(tag_element):
-    res = []
-    arr = [
-        (x.name, _get_heading_text(x))
-        for x in tag_element.find_all_previous(re.compile('h[1-6]'))
-    ]
-    tagname_arr = [x for x, _ in arr]
-    for i in range(1, 7):
-        tag = 'h{}'.format(i)
-        if tag not in tagname_arr:
-            continue
-    
-        parent_index = tagname_arr.index(tag)
-        res.append(arr[parent_index][1])
-        tagname_arr = tagname_arr[:parent_index]
-        
-    return res
-
-def _get_image_headings(page_url, lang):
-    response = urllib.request.urlopen(page_url)
-    page_html = response.read()
-    soup = BeautifulSoup(page_html, 'html.parser')
-    
-    res = {}
-    for x in soup.findAll("img"):
-        img_src = x.get('src')
-        if not _is_valid_img_src(img_src, lang):
-            continue
-        
-        img_name = _get_translated_file_label(lang) + _get_img_name(img_src, lang)
-        res[img_name] = _get_headings(x)
-    
-    return res
-
 
 ################################################################################
 # Public Interface
@@ -784,59 +656,3 @@ def query_img_captions(
         invalidate_cache=False,
         debug_info=debug_info
     )
-
-# Queries image headings from the article. That is, updates @headings field of
-# image metadata, which is a list containing all available headings from h1 to h6
-# TODO: move dublicated code from here and query_img_captions into common routine
-# TODO: optimise so that we query only images present in meta.json, not all of them
-def query_img_headings(
-    filename,
-    out_dir,
-    offset=0,
-    limit=None,
-    language_code='en',
-    invalidate_cache=False,
-    debug_info=False
-):
-    site = pywikibot.Site(language_code)    
-    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
-    limit = _validated_limit(limit, offset, len(pages))
-    
-    for i in range(offset, offset + limit):
-        p = pages[i]
-        if p.pageid == 0:
-            print("\nERROR: Cannot fetch the page " + p.title())
-            continue
-        
-        page_dir = _get_path(out_dir + p.title(as_filename=True).rstrip('.'), create_if_not_exists=False)
-        if not page_dir.exists():
-            print('\nArticle "{}" is missing from expected path={}'.format(p.title(), page_dir))
-            continue
-    
-        if debug_info: print(i, page_dir)        
-        meta_path = join(page_dir, 'img', 'meta.json')
-        meta_arr = _getJSON(meta_path)['img_meta']
-
-        if invalidate_cache:
-            for m in meta_arr:
-                m.pop('headings', None)
-        
-        text_path = join(page_dir, 'text.json')
-        article_url = _getJSON(text_path)['url']
-        
-        image_headings = _get_image_headings(article_url, language_code)
-        for filename, headings in image_headings.items():
-            if not _valid_img_type(filename): continue
-            if len(headings) == 0: continue
-            
-            res = [i for i, x in enumerate(meta_arr) if unquote(x['url']).split('/wiki/')[-1] == filename]
-            if len(res) != 1:
-                # if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
-                #     ' removed intentionally or cache is outdated'.format(page_dir, filename))
-                continue
-
-            # TODO: not update when invalidate_cache=False even though we already queried
-            i = res[0]
-            meta_arr[i]['headings'] = headings
-                
-        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
