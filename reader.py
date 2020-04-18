@@ -135,7 +135,7 @@ def _get_translated_file_label(language_code):
     # 2) click on any image to get a full-window preview
     # 3) look-up on the url page in the browser. The required translation
     #   would be just after the last "/", such as in this example it will be "Archivo:"
-    # https://es.wikipedia.org/wiki/A_Christmas_Carol#/media/Archivo:Charles_Dickens-A_Christmas_Carol-Cloth-First_Edition_1843.jpg
+    # https://es.wikipedia.org/wiki/A_Christmas_Carol#/media/Archivo:Charles.jpg
     # Please note that you need to include semicolon (":") at the end as well
     lang2label = {
         'en': 'File:',
@@ -271,7 +271,7 @@ def _is_meta_outdated(meta_path, img_links, params):
     if not meta_path.exists():
         return True
 
-    if not params.invalidate_oudated_img_meta_cache:
+    if not params.invalidate_cache.oudated_img_meta_cache:
         return False
     
     meta = _getJSON(meta_path)['img_meta']
@@ -287,18 +287,18 @@ def _is_meta_outdated(meta_path, img_links, params):
     
 
 def _img_download(img_links, page_dir, params, tc, uc):
-    if params.invalidate_img_cache:
+    if params.invalidate_cache.img_cache:
         shutil.rmtree(page_dir/"img", ignore_errors=True)
         
     img_dir = _get_path(page_dir/"img", create_if_not_exists=True)
     meta_path = img_dir / 'meta.json'
 
     _remove_invalid_imgs(img_dir)
-    if params.invalidate_img_meta_cache or params.invalidate_oudated_img_meta_cache:
+    if params.invalidate_cache.img_meta_cache or params.invalidate_cache.oudated_img_meta_cache:
         _remove_obsolete_imgs(img_dir, img_links)
     
     download_meta = (
-        params.invalidate_img_meta_cache or
+        params.invalidate_cache.img_meta_cache or
         _is_meta_outdated(meta_path, img_links, params)
     )
 
@@ -615,6 +615,25 @@ def _get_image_headings(page_url, lang):
 ################################################################################
 
 @dataclass
+class InvalidateCacheParams:
+    # if True, will remove all cached images and their metadata
+    img_cache: bool = False 
+
+    # if True, will redownload image metadata and all missing images. It will
+    # skip already downloaded images and will also delete obsolete cached images
+    img_meta_cache: bool = False
+
+    # if True, will check whether actual list of article images matched the
+    # cached one. If not, will proceed with this particular meta.json as if
+    # @invalidate_img_meta_cache=True. Consecuently, has no affect when 
+    # @invalidate_img_meta_cache=True already
+    oudated_img_meta_cache: bool = False
+
+    # if True, will remove all cached text.json, i.e. textual content of
+    # the article
+    text_cache: bool = False
+
+@dataclass
 class QueryParams:
     # specifies directory to download dataset. If it already contains part of
     # a dataset, that part will be skipped unless you explicitly specify with
@@ -630,24 +649,11 @@ class QueryParams:
     # limit of articles to download. If None, downloads from @offset to the end
     limit: Optional[int] = None
 
-    # if True, will remove all cached images and their metadata
-    invalidate_img_cache: bool = False 
+    # set of paramaters to invalidate different kind of cached data.
+    # Please see the definition above for specific documentation
+    invalidate_cache: InvalidateCacheParams = InvalidateCacheParams()
 
-    # if True, will redownload image metadata and all missing images. It will
-    # skip already downloaded images and will also delete obsolete cached images
-    invalidate_img_meta_cache: bool = False
-
-    # if True, will check whether actual list of article images matched the
-    # cached one. If not, will proceed with this particular meta.json as if
-    # @invalidate_img_meta_cache=True. Consecuently, has no affect when 
-    # @invalidate_img_meta_cache=True already
-    invalidate_oudated_img_meta_cache: bool = False
-
-    # if True, will remove all cached text.json, i.e. textual content of
-    # the article
-    invalidate_text_cache: bool = False
-
-    # if True and any @invalidate_*_cache parameter is also True, will iterate 
+    # if True and any of @invalidate_cache parameter is also True, will iterate 
     # over only downloaded articles from the @filename list specified and
     # update them
     only_update_cached_pages: bool = False
@@ -682,7 +688,7 @@ def query(filename: str, params: QueryParams) -> None:
         should_download_article = lambda path: (
             not path.exists() or
             stat(path).st_size == 0 or
-            params.invalidate_text_cache
+            params.invalidate_cache.text_cache
         )
         
         text_path = page_dir / 'text.json'
