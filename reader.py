@@ -662,6 +662,13 @@ class QueryParams:
     # All articles in @filename should be from a single wikipedia.
     language_code: str = 'en'
 
+# queries wikipedia articles from the list specified by a @filename path. All
+# data collection details can be configured via @params.
+# @filename should be a path of a file with article ids specified one per line.
+# By article id here we mean last part of its URL. That is, for the article with
+# URL = https://en.wikipedia.org/wiki/The_Relapse on English Wikipedia, the id 
+# would be "The_Relapse". Please note, that all article ids you specified in a 
+# file should be from the same Wikipedia, i.e. either all English or all Ukrainian.
 def query(filename: str, params: QueryParams) -> None:   
     site = pywikibot.Site(params.language_code)    
     pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
