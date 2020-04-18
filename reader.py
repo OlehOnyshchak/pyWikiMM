@@ -586,47 +586,6 @@ def query(filename: str, params: QueryParams) -> None:
             
     print('\nDownloaded {} images, where {} of them unavailable from commons'.format(tc, uc))
 
-# TODO: exreact features from all ORIGINAL files
-# Downloads or updates image descriptions in cached dataset. It is used internally in query function and
-# was also extracted into standalone function just for convenience when you want to update description
-# without redownloading images
-def query_img_descriptions(filename, out_dir, offset=0, limit=None, language_code='en'):
-    site = pywikibot.Site(language_code)    
-    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
-    limit = _validated_limit(limit, offset, len(pages))
-    
-    for i in range(offset, offset + limit):
-        p = pages[i]
-        if p.pageid == 0:
-            print("\nERROR: Cannot fetch the page " + p.title())
-            continue
-        
-        page_dir = _get_path(out_dir + p.title(as_filename=True).rstrip('.'), create_if_not_exists=False)
-        if not page_dir.exists():
-            print('\nArticle "{}" is missing from expected path={}'.format(p.title(), page_dir))
-            continue
-            
-        print(i, p.title())
-        img_dir = _get_path(page_dir/"img", create_if_not_exists=False)
-        meta_path = img_dir / 'meta.json'
-        meta = _getJSON(meta_path)
-        
-        updated = False
-        for img in p.imagelinks():
-            if not _valid_img_type(img.title(with_ns=False)):
-                continue
-            
-            i = next(i for i,x in enumerate(meta['img_meta']) if x['title'] == img.title(with_ns=False))
-            updated_description = _get_description(img)
-            if updated_description != meta['img_meta'][i]['description']:
-                updated = True
-                meta['img_meta'][i]['description'] = _get_description(img)
-                print("DESCRIPTION", img_dir/meta['img_meta'][i]['filename'])
-            
-        if updated:
-            meta_json = json.dumps(meta)
-            _dump(meta_path, meta_json)
-
 # Queries HTML-pages of articles and enriches dataset with parsed image captions.
 # TODO: handle parsing of "noviewer thumb" class images as well. Mostly for icons, not relevant
 def query_img_captions(
