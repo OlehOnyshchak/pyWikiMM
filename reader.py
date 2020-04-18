@@ -17,7 +17,7 @@ from urllib.request import urlretrieve
 from html.parser import HTMLParser
 from html.entities import name2codepoint
 from os import listdir, stat
-from os.path import isfile, join
+from os.path import isfile, join, basename
 from dataclasses import dataclass
 from typing import Optional
 from selenium import webdriver
@@ -25,6 +25,7 @@ from selenium.webdriver.firefox.options import Options
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
 
+# TODO: read this from json file
 KNOWN_ICONS = [
     'SPQRomani.svg', 'Status_iucn3.1_LC.svg', 'Bullseye1.png', 'OOjs_UI_icon_edit-ltr-progressive.svg',
     'Celestia.png', 'Kit_shorts_Crusadersshorts17b.png', 'Chess_xxt45.svg',
@@ -285,20 +286,12 @@ def _img_download(img_links, page_dir, params, tc, uc):
     
     return (tc, uc)
 
-# def _file_log(coll, filename):
-#     with open(filename, 'w') as f:
-#         for item in coll:
-#             f.write("%s\n" % item)
-
 def _remove_prefix(text, prefix):
     if text.startswith(prefix):
         return text[len(prefix):]
     return text
 
-def _get_image_captions(page_url, language_code, debug_info):
-    response = urllib.request.urlopen(page_url)
-    page_html = response.read()
-        
+def _get_image_captions(page_html, language_code, debug_info):
     res = []
     soup = BeautifulSoup(page_html, 'html.parser')
     for div in soup.findAll("div", {"class": "thumbcaption"}):
@@ -347,137 +340,132 @@ def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_
     default_url = 'https://www.wikipedia.org/'
     driver.get(default_url)
     return caption
+
+def _query_img_captions_from_article(
+    page_dir,
+    invalidate_cache=False,
+    language_code='en',
+    debug_info=False,
+):           
+    meta_path = join(page_dir, 'img', 'meta.json')
+    meta_arr = _getJSON(meta_path)['img_meta']
+
+    if invalidate_cache:
+        for m in meta_arr:
+            m.pop('caption', None)
+            m.pop('is_icon', None)
+    
+    text_path = join(page_dir, 'text.json')
+    page_html = _getJSON(text_path)['html']
+    
+    image_captions = _get_image_captions(page_html, language_code, debug_info)
+    for filename, caption in image_captions:
+        if not _valid_img_type(filename): continue
+        
+        res = [i for i, x in enumerate(meta_arr) if unquote(x['url']).split('/wiki/')[-1] == filename]
+        if len(res) != 1:
+            if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
+                ' removed intentionally or cache is outdated'.format(page_dir, filename))
+            continue
+        
+        i = res[0]
+        caption_match_description = (
+            ('description' not in meta_arr[i]) or
+            (caption != _remove_prefix(meta_arr[i]['description'], "English: "))
+        )
+
+        if 'caption' not in meta_arr[i] and caption_match_description:
+            meta_arr[i]['caption'] = caption
+            meta_arr[i]['is_icon'] = False # preview only applies to not-icons
             
+    _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+
 # Time-consuming but exhoustive fetching of image captions. On the other hand,
 # fetch_meta_captions_fast is a fast alternative, although it misses around 20% of labels
 def _query_img_captions_from_preview(
-    filename,
-    out_dir,
-    offset=0,
-    limit=None,
+    page_dir,
+    driver,
+    icons,
     language_code='en',
-    invalidate_cache=False,
     debug_info=False
 ):
-    site = pywikibot.Site(language_code)    
-    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
-    limit = _validated_limit(limit, offset, len(pages))
-    
-    options = Options()
-    options.headless = True
-    driver = webdriver.Firefox(options=options)
-    
-    icons = set()
-    for j in range(offset, offset + limit):
-        p = pages[j]
-        if p.pageid == 0:
-            print("\nERROR: Cannot fetch the page " + p.title())
-            continue
+    img_dir = _get_path(page_dir/"img", create_if_not_exists=False)
+    meta_path = img_dir / 'meta.json'
+    meta_arr = _getJSON(meta_path)['img_meta']
         
-        page_dir = _get_path(out_dir + p.title(as_filename=True).rstrip('.'), create_if_not_exists=False)
-        if not page_dir.exists():
-            print('\nArticle "{}" is missing from expected path={}'.format(p.title(), page_dir))
-            continue
-            
-        if debug_info: print('\n{}) {}'.format(j, page_dir))
-        img_dir = _get_path(page_dir/"img", create_if_not_exists=False)
-        meta_path = img_dir / 'meta.json'
-        meta_arr = _getJSON(meta_path)['img_meta']
-        
-        page_id = p.title(as_filename=True).rstrip('.')
-        for img in p.imagelinks():
-            if not _valid_img_type(img.title(with_ns=False)):
-                continue
-                            
-            img_id = img.title(as_filename=True, with_ns=False)
-            file_label = _get_translated_file_label(language_code)
-            res = [
-                i for i, x in enumerate(meta_arr)
-                if unquote(x['url']).split('/wiki/{}'.format(file_label))[-1] == img_id
-            ]
-            if len(res) != 1:
-                if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
-                    ' removed intentionally or cache is outdated'.format(page_id, img_id))
-                continue
-            
-            i = res[0]
-            if 'caption' in meta_arr[i] and not invalidate_cache:
-                if debug_info: print('Skipping cached caption', img_id) 
-                continue
-            
-            caption = _parse_caption_with_js(
-                driver, language_code, page_id, img_id, icons, debug_info
-            )
+    page_id = basename(page_dir)
+    if page_id == '':
+        page_id = basename(page_dir[:-1])
 
-            if caption is None: icons.add(img_id)
-            meta_arr[i].pop('caption', None)
-            meta_arr[i]['is_icon'] = (caption is None)
-            
-            caption_match_description = (
-                (not 'description' in meta_arr[i]) or
-                (caption != _remove_prefix(meta_arr[i]['description'], "English: "))
-            )
-            
-            if caption and caption_match_description:
-                meta_arr[i]['caption'] = caption
-            
-        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
-            
-    print(icons)
-    driver.quit()
-
-# Please check documentation for fetch_meta_captions for more details
-# prerequisites
-def _query_img_captions_from_article(
-    filename,
-    out_dir,
-    offset=0,
-    limit=None,
-    language_code='en',
-    invalidate_cache=False,
-    debug_info=False
-):
-    site = pywikibot.Site(language_code)    
-    pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
-    limit = _validated_limit(limit, offset, len(pages))
-    
-    for i in range(offset, offset + limit):
-        p = pages[i]
-        if p.pageid == 0:
-            print("\nERROR: Cannot fetch the page " + p.title())
+    for i, meta in enumerate(meta_arr):
+        img_title = meta['title']
+        if not _valid_img_type(img_title):
             continue
-        
-        page_dir = _get_path(out_dir + p.title(as_filename=True).rstrip('.'), create_if_not_exists=False)
-        if not page_dir.exists():
-            print('\nArticle "{}" is missing from expected path={}'.format(p.title(), page_dir))
-            continue
-    
-        if debug_info: print(i, page_dir)        
-        meta_path = join(page_dir, 'img', 'meta.json')
-        meta_arr = _getJSON(meta_path)['img_meta']
 
-        if invalidate_cache:
-            for m in meta_arr:
-                m.pop('caption', None)
-        
-        text_path = join(page_dir, 'text.json')
-        article_url = _getJSON(text_path)['url']
-        
-        image_captions = _get_image_captions(article_url, language_code, debug_info)
-        for filename, caption in image_captions:
-            if not _valid_img_type(filename): continue
+        file_label = _get_translated_file_label(language_code)
+        # TODO: here we extract img_id without language-specific File: prefix
+        # and later on we add it again to build a URL. Check whether we could
+        # work WITH that language-specific part and thus avoid translations
+        img_id = unquote(meta['url']).split('/wiki/{}'.format(file_label))[-1]
             
-            res = [i for i, x in enumerate(meta_arr) if unquote(x['url']).split('/wiki/')[-1] == filename]
-            if len(res) != 1:
-                if debug_info : print('WARNING: Meta for page {} is missing the image {}. Either was'\
-                    ' removed intentionally or cache is outdated'.format(page_dir, filename))
-                continue
+        if 'caption' in meta_arr[i]:
+            if debug_info: print('Skipping cached caption', img_id) 
+            continue
+
+        if 'is_icon' in meta_arr[i] and meta_arr[i]['is_icon']:
+            if debug_info: print('Skipping known icon', img_id) 
+            continue
             
-            i = res[0]
+        caption = _parse_caption_with_js(
+            driver, language_code, page_id, img_id, icons, debug_info
+        )
+
+        if caption is None: icons.add(img_id)
+        meta_arr[i].pop('caption', None)
+        meta_arr[i]['is_icon'] = (caption is None)
+            
+        caption_match_description = (
+            ('description' not in meta_arr[i]) or
+            (caption != _remove_prefix(meta_arr[i]['description'], "English: "))
+        )
+            
+        if caption and caption_match_description:
             meta_arr[i]['caption'] = caption
-            meta_arr[i]['is_icon'] = False # preview only applies to not-icons
-                
-        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+            
+    _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+
+# This function is firstly trying to parse as many captions as possible with 
+# a fast but unreliable approach. After that, it gathers all remaining captions
+# with a time-consuming method, which is to download HTML preview-pages for each
+# image in the article. Furthermore, it's dynamically generated content by
+# javascript. Thus we need to execute that generating code internally when
+# loading the page. Also generates 'is_icon' property for each field depending
+# whether image has a preview. Also, when caption matches description, we will
+# not record caption
+def _query_img_captions(
+    page_dir, driver, icons, language_code='en', invalidate_cache=False, debug_info=False
+):
+    if debug_info:
+        print("\nQuerying available captions with fast approach")
+
+    _query_img_captions_from_article(
+        page_dir=page_dir,
+        language_code=language_code,
+        invalidate_cache=invalidate_cache,
+        debug_info=debug_info
+    )
+
+    if debug_info:
+        print("\nQuerying remaining unparsed captions with time-consuming approach\n")
+
+    _query_img_captions_from_preview(
+        page_dir=page_dir,
+        driver=driver,
+        icons=icons,
+        language_code=language_code,
+        debug_info=debug_info
+    )
+
 
 
 ################################################################################
@@ -498,6 +486,10 @@ class InvalidateCacheParams:
     # @invalidate_img_meta_cache=True. Consecuently, has no affect when 
     # @invalidate_img_meta_cache=True already
     oudated_img_meta_cache: bool = False
+
+    # if True, will remove all cached image captions, which are parsed from
+    # article content
+    caption_cache: bool = False
 
     # if True, will remove all cached text.json, i.e. textual content of
     # the article
@@ -543,6 +535,11 @@ def query(filename: str, params: QueryParams) -> None:
     site = pywikibot.Site(params.language_code)    
     pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
     limit = _validated_limit(params.limit, params.offset, len(pages))
+
+    icons = set()
+    options = Options()
+    options.headless = True
+    driver = webdriver.Firefox(options=options)
     
     print('Downloading... offset={}, limit={}'.format(params.offset, limit))
     tc, uc = 0, 0
@@ -582,34 +579,20 @@ def query(filename: str, params: QueryParams) -> None:
             _dump(text_path, page_json)
             
         # downloading page images
-        tc, uc = _img_download(p.imagelinks(), page_dir, params, tc, uc)           
+        tc, uc = _img_download(p.imagelinks(), page_dir, params, tc, uc)
+
+        _query_img_captions(
+           page_dir=page_dir,
+           driver=driver,
+           icons=icons,
+           language_code=params.language_code,
+           invalidate_cache=params.invalidate_cache.caption_cache,
+           debug_info=params.debug_info,
+        )
             
     print('\nDownloaded {} images, where {} of them unavailable from commons'.format(tc, uc))
+    driver.quit()
 
-# Queries HTML-pages of articles and enriches dataset with parsed image captions.
-# TODO: handle parsing of "noviewer thumb" class images as well. Mostly for icons, not relevant
-def query_img_captions(
-    filename, out_dir, offset=0, limit=None, language_code='en', invalidate_cache=False, debug_info=False
-):
-    if debug_info: print("Querying available captions with fast approach\n")
-    _query_img_captions_from_article(
-        filename=filename,
-        out_dir=out_dir,
-        offset=offset,
-        limit=limit,
-        language_code=language_code,
-        invalidate_cache=invalidate_cache,
-        debug_info=debug_info
-    )
-
-    if debug_info: print("\nQuerying remaining unparsed caption with time-consuming approach\n")
-    _query_img_captions_from_preview(
-        filename=filename,
-        out_dir=out_dir,
-        offset=offset,
-        limit=limit,
-        language_code=language_code,
-        # should always be False, since we already invalidated the cache in _query_img_captions_from_article
-        invalidate_cache=False,
-        debug_info=debug_info
-    )
+    icons_json = _getJSON('new_icons.json')
+    updated_icons = icons.union(icons_json['known_icons'])
+    _dump('new_icons.json', json.dumps({"known_icons": list(updated_icons)}))
