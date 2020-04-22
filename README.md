@@ -86,3 +86,6 @@ features      | output of 5-th convolutional layer of ResNet152 trained on Image
 
 ## Further Reading
 This project was developed as a part of ["Image Recommendation for Wikipedia Articles"](http://dx.doi.org/10.13140/RG.2.2.17463.27042) thesis, so you can find more context as well as application of this downloader there.
+
+## Acknowledgments
+Special thanks to [Miriam Redi](http://www.visionresearchwitch.com/) for actively mentoring me in this project.
