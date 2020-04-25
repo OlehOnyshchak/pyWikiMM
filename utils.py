@@ -1,4 +1,6 @@
 import json
+import mwparserfromhell as mwp
+
 
 def _getJSON(path):
     with open(path) as json_file:
@@ -54,3 +56,13 @@ def _get_translated_file_label(language_code):
             'please add corresponding translation to @lang2label dict above')
 
     return lang2label[language_code]
+
+################################################################################
+# Public Interface
+################################################################################
+
+# Parses pure text out of all wikitext fomatting of the article. Might be useful
+# for processing text.json['wikitext']
+def parse_wikitext(wikitext: str):
+    wikicode = mwp.parse(wikitext)
+    return wikicode.strip_code()

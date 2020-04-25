@@ -1,6 +1,5 @@
 import pywikibot
 import json
-import mwparserfromhell as mwp
 import hashlib
 import urllib
 import re
@@ -55,12 +54,6 @@ class _MyHTMLParser(HTMLParser):
         
     def get_description(self):
         return self._description
-    
-
-# TODO: move text cleaning to dataset preprocessing part 
-# def _clean(wiki_text):
-#     wikicode = mwp.parse(wiki_text)
-#     return wikicode.strip_code()
 
 def _get_path(out_dir, create_if_not_exists):
     requests_path = Path(out_dir)
