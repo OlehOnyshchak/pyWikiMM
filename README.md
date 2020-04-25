@@ -89,3 +89,6 @@ This project was developed as a part of ["Image Recommendation for Wikipedia Art
 
 ## Acknowledgments
 Special thanks to [Miriam Redi](http://www.visionresearchwitch.com/) for actively mentoring me in this project.
+
+## Feedback is a Gift
+If you were interacting with this library, please do share your feedback. If something isn't working, isn't clear or is missing, please open an issue and let me know. Or if you found this library useful, please star this repo or just post a comment into feedback thread in Issues tab. Your comments will help me to improve the project, your starts will help me to identify how useful it is.
