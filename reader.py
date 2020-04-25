@@ -202,9 +202,10 @@ def _img_download(img_links, page_dir, params, tc, uc):
                 'on_commons': not filename.endswith('.ORIGINAL'),
             })
 
-            description = _get_description(img)
-            if len(description) > 0:
-                meta[-1]['description'] = description
+            if params.fill_property.img_description:
+                description = _get_description(img)
+                if len(description) > 0:
+                    meta[-1]['description'] = description
           
     if download_meta:
         meta_json = json.dumps({"img_meta": meta})
@@ -399,6 +400,23 @@ def _query_img_captions(
 ################################################################################
 
 @dataclass
+class FillPropertyParams:
+    # if False, will not download meta.json['captions']. This is the most 
+    # time-consuming operation in a script, so you might need to consider
+    # whether to include it. Also note, that meta.json['is_icon'] is its derived
+    # property, so it will only be present if you fill meta.json['captions']
+    img_caption: bool = True
+
+    # if False, will not download meta.json['description']
+    img_description: bool = True
+
+    # if False, will not download text.json['wikitext']
+    text_wikitext: bool = True
+
+    # if False, will not download text.json['html']
+    text_html: bool = True
+
+@dataclass
 class InvalidateCacheParams:
     # if True, will remove all cached images and their metadata
     img_cache: bool = False 
@@ -445,6 +463,10 @@ class QueryParams:
     # over only downloaded articles from the @filename list specified and
     # update them
     only_update_cached_pages: bool = False
+
+    # set of parameters to configure what data to download. Please see the
+    # FillPropertyParams definition above for more details
+    fill_property : FillPropertyParams = FillPropertyParams()
 
     # code of Wikipedia language, articles of which specified in @filename list.
     # All articles in @filename should be from a single wikipedia.
@@ -494,27 +516,33 @@ def query(filename: str, params: QueryParams) -> None:
         text_path = page_dir / 'text.json'
         if should_download_article(text_path):
             if params.debug_info: print("Downloading text.json")
-            page_json = json.dumps({
+            page_json = {
                 "title": p.title(),
                 "id": p.pageid,
                 "url": p.full_url(),
-                "wikitext": p.text,
-                "html": urllib.request.urlopen(p.full_url()).read().decode("utf-8"),
-            })
+            }
+
+            if params.fill_property.text_wikitext:
+                page_json["wikitext"] = p.text
+
+            if params.fill_property.text_html:
+                response = urllib.request.urlopen(p.full_url())
+                page_json["html"] = response.read().decode("utf-8")
              
-            _dump(text_path, page_json)
+            _dump(text_path, json.dumps(page_json))
             
         # downloading page images
         tc, uc = _img_download(p.imagelinks(), page_dir, params, tc, uc)
 
-        _query_img_captions(
-           page_dir=page_dir,
-           driver=driver,
-           icons=icons,
-           language_code=params.language_code,
-           invalidate_cache=params.invalidate_cache.caption_cache,
-           debug_info=params.debug_info,
-        )
+        if params.fill_property.img_caption:
+            _query_img_captions(
+                page_dir=page_dir,
+                driver=driver,
+                icons=icons,
+                language_code=params.language_code,
+                invalidate_cache=params.invalidate_cache.caption_cache,
+                debug_info=params.debug_info,
+            )
             
     print('\nDownloaded {} images, where {} of them unavailable from commons'.format(tc, uc))
     driver.quit()
