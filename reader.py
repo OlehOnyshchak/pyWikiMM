@@ -8,9 +8,6 @@ import shutil
 import time
 import urllib.request
 
-from utils import (
-    _getJSON, _dump, _get_translated_file_label, _valid_img_type, _validated_limit
-)
 from pathlib import Path
 from pywikibot import pagegenerators
 from urllib.request import urlretrieve
@@ -24,9 +21,15 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
-
-KNOWN_ICONS_PATH = 'known_icons.json'
-KNOWN_ICONS = set(_getJSON(KNOWN_ICONS_PATH)['known_icons'])
+from utils import (
+    _getJSON,
+    _dump,
+    _get_translated_file_label,
+    _valid_img_type,
+    _validated_limit,
+    _KNOWN_ICONS_PATH,
+    _KNOWN_ICONS,
+)
 
 # TODO: replace with beautifulsoup
 class _MyHTMLParser(HTMLParser):
@@ -97,9 +100,9 @@ def _get_img_path(img, img_dir):
         
     return img_name, img_path, img_path_orig
 
-def _single_img_download(img, img_dir, debug_info):
+def _single_img_download(img, img_dir, params):
     img_name, img_path, img_path_orig = _get_img_path(img, img_dir)
-    if not _valid_img_type(img_name):
+    if not _valid_img_type(img_name, params.early_icons_removal):
         if img_path.exists():
             img_path.unlink()
                 
@@ -111,7 +114,7 @@ def _single_img_download(img, img_dir, debug_info):
     if img_path_orig.exists():
         return (False, img_path_orig.name)
     
-    if debug_info: print('Downloading image', img_name)
+    if params.debug_info: print('Downloading image', img_name)
     try:
         urlretrieve(_get_url(img_name), img_path)
         return (True, img_path.name) 
@@ -127,11 +130,12 @@ def _remove_invalid_imgs(img_dir):
             print("Removing corrupted image", fpath)
             fpath.unlink()
     
-def _remove_obsolete_imgs(img_dir, img_links):
+def _remove_obsolete_imgs(img_dir, img_links, params):
     uptodate_imgs = [_get_img_path(img, img_dir) for img in img_links]
+    icon_removal = params.early_icons_removal
     img_names = (
-        [x[1].name for x in uptodate_imgs if _valid_img_type(x[0])] +
-        [x[2].name for x in uptodate_imgs if _valid_img_type(x[0])]
+        [x[1].name for x in uptodate_imgs if _valid_img_type(x[0], icon_removal)] +
+        [x[2].name for x in uptodate_imgs if _valid_img_type(x[0], icon_removal)]
     )
     
     files = [img_dir/f for f in listdir(img_dir) if isfile(join(img_dir, f))]
@@ -163,11 +167,12 @@ def _is_meta_outdated(meta_path, img_links, params):
     meta_titles = [x['title'] for x in meta]
     current_titles = [
         x.title(with_ns=False)
-        for x in img_links if _valid_img_type(x.title(with_ns=False))
+        for x in img_links
+        if _valid_img_type(x.title(with_ns=False), params.early_icons_removal)
     ]
     
     res = sorted(meta_titles) != sorted(current_titles)
-    if res and params.debug_info: print("OUTDATED META",  meta_path)
+    if res and params.debug_info: print("OUTDATED META", meta_path)
     return res
     
 
@@ -180,7 +185,7 @@ def _img_download(img_links, page_dir, params, tc, uc):
 
     _remove_invalid_imgs(img_dir)
     if params.invalidate_cache.img_meta_cache or params.invalidate_cache.oudated_img_meta_cache:
-        _remove_obsolete_imgs(img_dir, img_links)
+        _remove_obsolete_imgs(img_dir, img_links, params)
     
     download_meta = (
         params.invalidate_cache.img_meta_cache or
@@ -190,7 +195,7 @@ def _img_download(img_links, page_dir, params, tc, uc):
     if download_meta and params.debug_info: print("Updating image metadata")
     meta = []
     for img in img_links:
-        downloaded, filename = _single_img_download(img, img_dir, params.debug_info)
+        downloaded, filename = _single_img_download(img, img_dir, params)
         if downloaded: 
             tc += 1
             
@@ -237,7 +242,7 @@ def _get_image_captions(page_html, language_code, debug_info):
 
 def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_info):
     caption = None
-    if img_id in KNOWN_ICONS or img_id in icons:
+    if img_id in _KNOWN_ICONS or img_id in icons:
         if debug_info: print('Skipping known icon', img_id)
         return caption
 
@@ -248,8 +253,9 @@ def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_
     driver.get(url)
 
     sleep_time = 1
+    retry_count = 2
     time.sleep(sleep_time) # reqired for JS to load content
-    for k in range(5):
+    for k in range(retry_count):
         try:
             # TODO: there is a bug when trying to parse noviewer thum. Driver returns caption from previous page
             # Currently not reproducible when invalidate_cache=False and caption already exists
@@ -472,6 +478,10 @@ class QueryParams:
     # All articles in @filename should be from a single wikipedia.
     language_code: str = 'en'
 
+    # if True, will optimise the collection process to not even download known
+    # icons. Remove this flag if you want to get them
+    early_icons_removal: bool = True
+
 # queries wikipedia articles from the list specified by a @filename path. All
 # data collection details can be configured via @params.
 # @filename should be a path of a file with article ids specified one per line.
@@ -547,6 +557,6 @@ def query(filename: str, params: QueryParams) -> None:
     print('\nDownloaded {} images, where {} of them unavailable from commons'.format(tc, uc))
     driver.quit()
 
-    icons_json = _getJSON(KNOWN_ICONS_PATH)
+    icons_json = _getJSON(_KNOWN_ICONS_PATH)
     updated_icons = icons.union(icons_json['known_icons'])
-    _dump(KNOWN_ICONS_PATH, json.dumps({"known_icons": list(updated_icons)}))
+    _dump(_KNOWN_ICONS_PATH, json.dumps({"known_icons": list(updated_icons)}))

@@ -1,6 +1,5 @@
 import json
 
-
 def _getJSON(path):
     with open(path) as json_file:
         return json.loads(json.load(json_file))
@@ -9,7 +8,13 @@ def _dump(path, data):
     with open(path, 'w', encoding='utf8') as outfile:
         json.dump(data, outfile, indent=2, ensure_ascii=False)
 
-def _valid_img_type(img_name):
+_KNOWN_ICONS_PATH = 'known_icons.json'
+_KNOWN_ICONS = set(_getJSON(_KNOWN_ICONS_PATH)['known_icons'])
+
+def _valid_img_type(img_name, early_icon_removal=False):
+    if early_icon_removal and img_name in _KNOWN_ICONS:
+        return False
+
     valid_types = [
         '.tif', '.tiff', '.jpg', '.jpeg', '.jpe', '.jif,', '.jfif', '.jfi',  '.gif', '.png', '.svg'
     ]
