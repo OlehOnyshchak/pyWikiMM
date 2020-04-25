@@ -25,84 +25,10 @@ from selenium.webdriver.firefox.options import Options
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
 
-# TODO: read this from json file
-KNOWN_ICONS = [
-    'SPQRomani.svg', 'Status_iucn3.1_LC.svg', 'Bullseye1.png', 'OOjs_UI_icon_edit-ltr-progressive.svg',
-    'Celestia.png', 'Kit_shorts_Crusadersshorts17b.png', 'Chess_xxt45.svg',
-    'Flag_of_the_United_States_(1912-1959).svg', 'Chess_plt45.svg', 'Allosaurus_Jardin_des_Plantes.png',
-    'Flag_of_Scotland.svg', 'Hockey_current_event.svg', 'Tudor_Ensign_1485-1603.svg',
-    'Naval_ensign_of_the_Empire_of_Japan.svg', 'Blank_television_set.svg', 'Magic_Kingdom_castle.jpg',
-    'Kit_body.svg', 'Naval_Ensign_of_the_United_Kingdom.svg', 'Flag_of_Italy.svg', 'PD-icon.svg',
-    'Papapishu-Lab-icon-6.svg', 'NFPA_704.svg', 'California_480.svg', 'Flag_of_Finland.svg', 'Chess_xot45.svg',
-    'Ella_—_John_Speed.JPG', 'Dagger-14-plain.png', 'Openstreetmap_logo.svg', 'Flag_of_Georgia_(U.S._state).svg',
-    'Hertfordshire_UK_relief_location_map.jpg', 'Earth_Day_Flag.png', 'Flag_of_Austria.svg',
-    'Oceania_(orthographic_projection).svg', 'Wikispecies-logo.svg', 'Flag_of_Australia_(converted).svg',
-    'Battle_of_Blenheim_-_Penetration,_1730,_13_August_1704.gif', 'Nuvola_apps_package_games_strategy.png',
-    'Flag_of_Great_Britain_(1707–1800).svg', 'Hessen_HG_flag.svg', 'Gold_medal_icon.svg', 'Kit_right_arm.svg',
-    'Loudspeaker.svg', 'Stylised_Lithium_Atom.svg', 'Flag_of_Hesse.svg', 'Belgium_relief_location_map.jpg',
-    'Pfeil_links.svg', 'Flag_of_Hanover_(1692).svg', 'Battle_of_Blenhiem_-_Explotation,_13_August_1704.gif',
-    'Johnny-automatic-scales-of-justice.svg', 'Ginsberg-dylan.jpg', 'Status_EPBC_EN.svg',
-    'Tom_Sawyer_1876_frontispiece.jpg', 'Flag_of_the_Soviet_Union.svg', 'Nobel_Prize.png', 'Flag_of_India.svg',
-    'Chessboard480.svg', '..West_Bengal_Flag(INDIA).png', 'Commons-logo.svg', 'Open_Access_logo_PLoS_transparent.svg',
-    'Flag_of_Australia.svg', 'Order_of_the_Bath_(ribbon).svg', 'Status_iucn3.1_EX.svg', 'Flag_of_Germany.svg',
-    '046CupolaSPietro.jpg', 'Chess_kdt45.svg', 'Ecuador_relief_location_map.svg', 'Flag_of_Iran.svg',
-    'Status_iucn3.1_blank.svg', 'Flag_of_the_Kingdom_of_Prussia_(1701-1750).svg', 'Wikisource-logo.svg',
-    'Flag_of_the_United_States_(1848–1851).svg', 'Speaker_Icon.svg', 'Kit_shorts.svg', 'Flag_of_the_Czech_Republic.svg',
-    'Chess_bdt45.svg', 'Heinkel_He_111_during_the_Battle_of_Britain.jpg', 'Gloriole_blur.svg',
-    'Symbol_book_class2.svg', 'Books-aj.svg_aj_ashton_01.svg', 'Pyramidi_aavikolla.png', 'EC1835_C_cut.jpg',
-    'Bohr-atom-PAR.svg', 'Quill_and_ink.svg', 'Façade_de_la_cathédrale_Saint-Pierre_de_Genève.jpg',
-    'Chavundaraya_Poet_Handwriting.JPG', 'Socrates.png', 'Wikidata-logo.svg', 'Nome_deities_with_offerings.JPG.jpg',
-    'Mergefrom.svg', 'Flag_of_Poland.svg', 'People_icon.svg', 'Flag_of_the_United_Kingdom.svg', 'Flag_of_Oklahoma.svg',
-    'Flag_of_Portugal.svg', 'Flag_of_New_Zealand.svg', 'Chess_ndt45.svg', 'Flag_of_Denmark.svg', 'P_vip.svg',
-    'Wikiversity-logo-Snorky.svg', 'All_Gizah_Pyramids.jpg', 'Wikipedia-logo.svg', 'Nuvola_apps_kmessedwords.png',
-    'Status_iucn3.1_VU.svg', 'Star_empty.svg', 'Chess_rlt45.svg', 'Red_Pencil_Icon.png', 'Flag_of_Switzerland.svg',
-    'Pfeil_unten.svg', 'Seal_of_California.svg', 'Nuvola_apps_ksim.png', 'Flag_of_Oklahoma_City,_Oklahoma.png',
-    'Pfeil_rechts.svg', 'Gnome-mime-audio-openclipart.svg', 'Wikipedia-logo-v2.svg', 'The_Metropolitan_M_Stamp.PNG',
-    'Chess_rdt45.svg', 'California_1.svg', 'USS_Lexington_Coral_Sea_early_morning.jpg', 'Dragon-149393.svg',
-    'California_35.svg', 'Gnome-globe.svg', 'Flag_of_Monaco.svg', 'Wikiversity-logo-en.svg', 'US_101_(1961_cutout).svg',
-    'Bandera_del_Primer_Imperio_Mexicano.svg', 'Kit_right_arm_Crusadersright16.png',
-    'Pending-protection-shackle.svg', 'Gnome-speakernotes.svg', 'Aum_Om_red.svg', 'Sound-icon.svg', 'Portal-puzzle.svg',
-    'Kit_left_arm_Crusadersleft16b.png', 'Royal_Standard_of_the_King_of_France.svg', 'Nuvola_apps_bookcase.svg',
-    'Audio_a.svg', 'Flag_of_Japan_(1870-1999).svg', 'Kit_left_arm.svg', 'Symbol_template_class.svg',
-    'Battle_of_Blenhiem_-_Situation_about_noon,_13_August_1704.gif', 'GM_headquarters_in_Detroit.JPG',
-    'WPVG_icon_2016.svg', 'BS_Bismarck.png', 'Flag_of_Samoa.svg', 'Banner_of_the_Holy_Roman_Emperor_(after_1400).svg',
-    'Flag_of_Hanover_1837-1866.svg', 'Flag_of_Great_Britain_(1707-1800).svg', 'Gold_medal_icon_(G_initial).svg',
-    'Union_flag_1606_(Kings_Colors).svg', 'Kit_shorts_Crusadersshorts17.png', 'Flag_of_Cross_of_Burgundy.svg',
-    'Symbol_list_class.svg', 'Wikibooks-logo.svg', 'Wiktionary-logo-en-v2.svg', 'Equador_physical_map.svg',
-    'Flag_of_Canada_(Pantone).svg', 'Nuvola_apps_kalzium.svg', 'IRFU_flag.svg', 'Blank.png', 'Okapi2.jpg',
-    'Extended-protection-shackle.svg', 'Bandera_de_España_1701-1748.svg', 'Flag_of_Bavaria_(lozengy).svg',
-    'Kit_right_arm_Crusadersright16b.png', 'Asia_(orthographic_projection).svg', 'Industry5.svg',
-    'Wikiversity-logo.svg', 'Skull_and_Crossbones.svg', 'Kit_socks_Crusaderssock17b.png', 'Kit_socks_long.svg',
-    'Wikivoyage-Logo-v3-icon.svg', 'Chess_pdt45.svg', 'Pavillon_royal_de_la_France.svg', 'Motorsport_current_event.svg',
-    'US-NationalParkService-ShadedLogo.svg', 'P_christianity.svg', 'Cheshire_Flag.svg', 'Book_collection.jpg',
-    'Stylised_atom_with_three_Bohr_model_orbits_and_stylised_nucleus.svg', 'Wiktionary-logo-v2.svg',
-    'Move-protection-shackle.svg', "Flag_of_the_People's_Republic_of_China.svg", 'Decrease_Positive.svg',
-    'California_county_map_(San_Francisco_County_enlarged).svg', 'Flag_of_Russia.svg', '2hockeypucks.jpg',
-    'USS_Lexington_under_attack_at_Coral_Sea.jpg', 'Edit-clear.svg', 'Sportcar_sergio_luiz_ara_01.svg',
-    'Kit_body_Crusaderskit17.png', 'Chess_qlt45.svg', 'Star_full.svg', 'Flag_of_Argentina.svg',
-    'War_Ensign_of_Germany_(1903–1919).svg', 'Wikiquote-logo.svg', 'Flag_of_Brazil.svg', 'Pfeil_oben.svg',
-    'Silver_medal_icon_(S_initial).svg', 'A_coloured_voting_box.svg', 'National_Rail_logo.svg', 'P_history.svg',
-    'Statenvlag.svg', 'Flag_of_Fiji.svg', 'England_relief_location_map.jpg', 'Sf-userbox.png',
-    'Flag_of_France.svg', 'Arrow_Blue_Right_001.svg', 'Flag_of_the_United_States.svg', 'BelarusStub.svg',
-    'Red_pog.svg', 'Increase2.svg', 'Silver_medal_icon.svg', 'Leningrad_bede.jpg', 'Tree_of_life.svg',
-    'Flag_of_Tonga.svg', 'Flag_of_Mexico.svg', 'Four_Provinces_Flag.svg', '626Byzantium.svg', 'Cscr-featured.svg',
-    'G13065_USS_Yorktown_Pearl_Harbor_May_1942.jpg', 'Flag_of_California.svg', 'Kit_socks_Crusaderssocks17.png',
-    'Treecreepermap.png', 'Vampire_Smiley.png', 'California_82.svg', 'Chess_qdt45.svg', 'Flag_of_Japan_(1870–1999).svg',
-    'Flag_of_Canada.svg', 'Bandera_de_España_1701-1760.svg', 'USS_Lexington_brennt.jpg', 'US_101_(CA).svg',
-    'Arrow_Blue_Left_001.svg', 'Derafsh_Kaviani_flag_of_the_late_Sassanid_Empire.svg',
-    'Large_explosion_aboard_USS_Lexington_(CV-2),_8_may_1942.jpg', 'LA_Skyline_Mountains2.jpg', 'White_flag_icon.svg',
-    'Europe_orthographic_Caucasus_Urals_boundary_(with_borders).svg', 'Kit_left_arm_Crusadersleft16.png',
-    'British_Empire_1897.jpg', '大洋.png', 'Decrease2.svg', 'SF_From_Marin_Highlands3.jpg', 'Flag_of_Ireland.svg',
-    'Merchant_flag_of_Japan_(1870).svg', 'Flag_of_Sweden.svg', 'Skull_and_crossbones.svg', 'Folder_Hexagonal_Icon.svg',
-    'Diocese_of_Winchester_arms.svg', 'Kit_body_Crusaderskit17b.png', 'Animation_disc.svg', 'Chess_nlt45.svg',
-    'Flag_of_Belarus.svg', 'Star_half.svg', 'Om_symbol.svg', 'Simpsons_tv_icon.svg', 'Flag_of_Indonesia.svg',
-    'Chess_klt45.svg', 'Chess_blt45.svg', 'Wind-turbine-icon.svg', 'Flag_of_the_United_States_(1848-1851).svg',
-    'Flag_of_England.svg', "Saint_Patrick's_Saltire.svg", 'Semi-protection-shackle.svg', 'Global_thinking.svg',
-    'Gnome-mime-sound-openclipart.svg', 'War_Ensign_of_Germany_1903-1918.svg', 'Wikinews-logo.svg',
-    'Double-dagger-14-plain.png', 'Underground_no-text.svg', 'Kreuz-hugenotten.svg',
-    'Mary_Wollstonecraft_Shelley_Rothwell.tif', 'Bluetank.png', 'Flag_of_the_Habsburg_Monarchy.svg'
-]
+KNOWN_ICONS_PATH = 'known_icons.json'
+KNOWN_ICONS = set(_getJSON(KNOWN_ICONS_PATH)['known_icons'])
 
+# TODO: replace with beautifulsoup
 class _MyHTMLParser(HTMLParser):
     _description = ""
     _tag_counter = 0
@@ -128,7 +54,7 @@ class _MyHTMLParser(HTMLParser):
         return self._description
     
 
-# onyshchak todo: move text cleaning to dataset preprocessing part 
+# TODO: move text cleaning to dataset preprocessing part 
 # def _clean(wiki_text):
 #     wikicode = mwp.parse(wiki_text)
 #     return wikicode.strip_code()
@@ -141,7 +67,7 @@ def _get_path(out_dir, create_if_not_exists):
     return requests_path
 
 def _get_url(img_name, size=600):
-    # onyshchak: img.oldest_file_info.url might have the same information
+    # TODO: img.oldest_file_info.url might have the same information
     url_prefix = "https://upload.wikimedia.org/wikipedia/commons/thumb/"
     md5 = hashlib.md5(img_name.encode('utf-8')).hexdigest()
     sep = "/"
@@ -593,6 +519,6 @@ def query(filename: str, params: QueryParams) -> None:
     print('\nDownloaded {} images, where {} of them unavailable from commons'.format(tc, uc))
     driver.quit()
 
-    icons_json = _getJSON('new_icons.json')
+    icons_json = _getJSON(KNOWN_ICONS_PATH)
     updated_icons = icons.union(icons_json['known_icons'])
-    _dump('new_icons.json', json.dumps({"known_icons": list(updated_icons)}))
+    _dump(KNOWN_ICONS_PATH, json.dumps({"known_icons": list(updated_icons)}))
