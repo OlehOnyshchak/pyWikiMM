@@ -488,6 +488,8 @@ def query(filename: str, params: QueryParams) -> None:
     limit = _validated_limit(params.limit, params.offset, len(pages))
 
     icons = set()
+
+    # TODO: don't execute driver when fill_captions=Flase
     options = Options()
     options.headless = True
     driver = webdriver.Firefox(options=options)
