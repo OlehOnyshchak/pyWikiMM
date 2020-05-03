@@ -101,7 +101,7 @@ is_icon       | True if image is an icon, e.g. category icon. We assume that ima
 on_commons    | True if image is available from Wikimedia Commons dataset
 description   | description of an image parsed from Wikimedia Commons page, if available
 caption       | caption of an image parsed from Wikipedia article, if available
-headings      | list of all nested headings of location where article is placed in Wikipedia article. The first element is top-most heading
+headings      | list of all parent headings of image in Wikipedia article. The first element is a top-most heading
 features      | output of 5-th convolutional layer of ResNet152 trained on ImageNet dataset. That output of shape (19, 24, 2048) is then max-pooled to a shape (2048,). Features taken from original images downloaded in `jpeg` format with fixed width of 600px. Practically, it is a list of floats with len = 2048
 
 ## Further Reading
