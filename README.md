@@ -2,8 +2,19 @@
 Collects a dataset of Wikipedia articles and corresponding images
 
 ## About
-This is a package to collect and preprocess multimodal(text-images) dataset of Wikipedia articles. Besides collecting article content and its images, it also retrieves a gread deal of metadata such as URI, HTML-snapshot, image caption and descriptions and a lot more. You can refer to this [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment. Or you can check our downloaded dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) also hosted on [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
+This is a package to collect and preprocess multimodal(text-images) dataset of Wikipedia articles. Besides collecting article content and its images, it also retrieves a gread deal of metadata such as URI, HTML-snapshot, image caption and descriptions and a lot more. 
 
+## Installation
+TODO: describe installation process properly
+
+You can refer to this [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment. Or you can check our downloaded dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) also hosted on [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
+
+```bash
+  \# 1. Adjust parameters in `main.py` for your needs
+  sudo docker build . -t wiki_downloader:1.0
+  \# Change first part of the path to be valid on your machine
+  sudo docker run -v /home/oleh/data_docker:/home/seluser/data wiki_downloader:1.0
+```
 ## Main Features
 * given list of articles as an input, downloads their content with images, enrich with a lot of metadata
 * functionality extensively support cached data. So if you need to update some specific parts of your dataset, it would be done in almost optimal way
