@@ -22,4 +22,4 @@ RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install git+https://github.com/OlehOnyshchak/RedditScore.git
 
 # TODO: try to workaround because mounted drive has root owner
-CMD (echo hey; chown $USER data; python3 main.py)
+CMD (chown $USER data; python3 main.py)
