@@ -7,9 +7,9 @@ This is a package to collect and preprocess multimodal(text-images) dataset of W
 ## Installation
 If Featured dataset mentioned above does not satisfy your need, you have two options to create your own dataset.
 ### Kaggle
-The most straightforward option is to create you dataset in cloud. In that case, you can just fork our [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment at all. In the end, you will simply download the collected dataset.
+The most straightforward option to create your dataset is to do it in the cloud. In that case, you can just fork our [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment at all. In the end, you will simply download the collected dataset.
 ### Docker
-If your dataset is too big to collect it in cloud, we prepared docker container so that you can easily do it locally. Just follow the instructions below to build and run docker container:
+If your dataset is too big to collect it in the cloud, we prepared docker container so that you can easily do it locally. Just follow the instructions below to build and run a docker container:
 ```bash
 $ git clone https://github.com/OlehOnyshchak/WikipediaMultimodalDownloader.git
 $ cd WikipediaMultimodalDownloader/
