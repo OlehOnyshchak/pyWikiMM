@@ -97,8 +97,8 @@ filename      |  unique image id, md5 hashcode of original image title
 title         |  image title retrieved from Commons, if applicable
 parsed_title  | image title split into words, i.e. "helloWorld.jpg" -> "hello world"
 url           | url of an image on Wikipedia
-is_icon       | True, if image is an icon, e.g. category icon. We assume that image is an icon if you cannot load a preview on Wikipedia after clicking on it
-on_commons    | True, if image is available from Wikimedia Commons dataset
+is_icon       | True if image is an icon, e.g. category icon. We assume that image is an icon if you cannot load a preview on Wikipedia after clicking on it
+on_commons    | True if image is available from Wikimedia Commons dataset
 description   | description of an image parsed from Wikimedia Commons page, if available
 caption       | caption of an image parsed from Wikipedia article, if available
 headings      | list of all nested headings of location where article is placed in Wikipedia article. The first element is top-most heading
