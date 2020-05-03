@@ -81,15 +81,10 @@ def _get_description(img):
     return parser.get_description().replace("\n", "")
 
 def _get_img_path(img, img_dir):
-    img_name = img.title(as_filename=True, with_ns=False).replace("\"", "")
+    img_name = unquote(img.title(with_ns=False, as_url=True))
     img_name_valid = hashlib.md5(img_name.encode('utf-8')).hexdigest()  
     img_path = img_dir / (img_name_valid + ".jpg")
-    
-    img_path_orig = Path(str(img_path) + "_" + Path(img_name).suffix + ".ORIGINAL")
-    # img_path_orig = Path(str(img_path) + "_" + img_name + ".ORIGINAL")
-    # if len(str(img_path_orig).encode('utf-8')) >= 260:
-    #     # pathlib doesn't support Win long path =(
-    #     img_path_orig = Path(str(img_path) + "_" + Path(img_name).suffix + ".ORIGINAL")
+    img_path_orig = Path(str(img_path) + "_" + Path(img_name).suffix + ".ORIGINAL")    
         
     return img_name, img_path, img_path_orig
 
