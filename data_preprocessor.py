@@ -211,7 +211,7 @@ def filter_img_metadata(
                 
         _dump(meta_path, json.dumps({"img_meta": meta_arr_filtered}))
 
-def parse_image_titles(
+def tokenize_image_titles(
     data_path, offset=0, limit=None, invalidate_cache=False, debug_info=False
 ):
     article_paths = [
