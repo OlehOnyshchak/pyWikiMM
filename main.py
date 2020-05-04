@@ -82,7 +82,7 @@ data_preprocessor.generate_visual_features(
 )
 
 print("Data Preprocessing 5. Parse image titles\n")
-data_preprocessor.parse_image_titles(
+data_preprocessor.tokenize_image_titles(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit,
