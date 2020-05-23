@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import reader
-import data_preprocessor
+import preprocessor
 
 ################################################################################
 ## Please refer to data_collection_demo.ipynb for documentation
@@ -43,7 +43,7 @@ print("Data Collection\n")
 reader.query(filename=filename, params=query_params)
 
 print("Data Preprocessing 1. Removing images not available on Commons\n")
-data_preprocessor.filter_img_metadata(
+preprocessor.filter_img_metadata(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit, 
@@ -53,7 +53,7 @@ data_preprocessor.filter_img_metadata(
 )
 
 print("Data Preproccesing 2. Removing icons\n")
-data_preprocessor.filter_img_metadata(
+preprocessor.filter_img_metadata(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit, 
@@ -63,7 +63,7 @@ data_preprocessor.filter_img_metadata(
 )
 
 print("Data Preprocessing 3. Parsing Image Headings\n")
-data_preprocessor.parse_image_headings(
+preprocessor.parse_image_headings(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit,
@@ -73,7 +73,7 @@ data_preprocessor.parse_image_headings(
 )
 
 print("Data Preprocessing 4. Generating visual features\n")
-data_preprocessor.generate_visual_features(
+preprocessor.generate_visual_features(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit,
@@ -82,7 +82,7 @@ data_preprocessor.generate_visual_features(
 )
 
 print("Data Preprocessing 5. Parse image titles\n")
-data_preprocessor.tokenize_image_titles(
+preprocessor.tokenize_image_titles(
     data_path=query_params.out_dir,
     offset=query_params.offset,
     limit=query_params.limit,
