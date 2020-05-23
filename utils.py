@@ -1,19 +1,23 @@
 import json
+import pathlib
 import mwparserfromhell as mwp
+from typing import Tuple, Sequence, Union, Dict, Optional, Any
+from __future__ import annotations
 
+pathlike = Union[str, pathlib.Path]
 
-def _getJSON(path):
+def _getJSON(path: pathlike) -> JSONType:
     with open(path) as json_file:
         return json.loads(json.load(json_file))
     
-def _dump(path, data):
+def _dump(path: pathlike, data: JSONType) -> None:
     with open(path, 'w', encoding='utf8') as outfile:
-        json.dump(data, outfile, indent=2, ensure_ascii=False)
+        json.dump(json.dumps(data), outfile, indent=2, ensure_ascii=False)
 
 _KNOWN_ICONS_PATH = 'known_icons.json'
 _KNOWN_ICONS = set(_getJSON(_KNOWN_ICONS_PATH)['known_icons'])
 
-def _valid_img_type(img_name, early_icon_removal=False):
+def _valid_img_type(img_name: str, early_icon_removal: bool = False) -> bool:
     if early_icon_removal and img_name in _KNOWN_ICONS:
         return False
 
@@ -25,11 +29,11 @@ def _valid_img_type(img_name, early_icon_removal=False):
             return True
     return False
 
-def _validated_limit(limit, offset, list_len):
+def _validated_limit(limit: Optional[int], offset: int, list_len: int) -> int:
     res = limit if limit else list_len - offset
     return min(res, list_len - offset)
 
-def _get_translated_file_label(language_code):
+def _get_translated_file_label(language_code: str) -> str:
     # to identify the correct translation, follow these steps:
     # 1) open some Wikipedia article in required language
     # 2) click on any image to get a full-window preview
@@ -61,8 +65,13 @@ def _get_translated_file_label(language_code):
 # Public Interface
 ################################################################################
 
+JSONPrimiteType = Union[str, int, float, bool, None]
+JSONCompoundType = Union[Sequence[JSONPrimiteType], Tuple[JSONPrimiteType]]
+JSONType = Dict[str, Any]
+JSONSerializableType = Union[JSONCompoundType, JSONCompoundType, JSONType]
+
 # Parses pure text out of all wikitext fomatting of the article. Might be useful
 # for processing text.json['wikitext']
-def parse_wikitext(wikitext: str):
+def parse_wikitext(wikitext: str) -> str:
     wikicode = mwp.parse(wikitext)
     return wikicode.strip_code()

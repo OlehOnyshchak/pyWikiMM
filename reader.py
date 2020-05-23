@@ -7,8 +7,10 @@ import shutil
 import time
 import urllib.request
 
+from __future__ import annotations 
 from pathlib import Path
-from pywikibot import pagegenerators
+from pywikibot import pagegenerators, Page
+from pywikibot.data.api import PageGenerator
 from urllib.request import urlretrieve
 from html.parser import HTMLParser
 from html.entities import name2codepoint
@@ -18,8 +20,10 @@ from dataclasses import dataclass
 from typing import Optional
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.webdriver import WebDriver
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
+from typing import Set, Optional, List, Tuple
 from utils import (
     _getJSON,
     _dump,
@@ -55,14 +59,15 @@ class _MyHTMLParser(HTMLParser):
     def get_description(self):
         return self._description
 
-def _get_path(out_dir, create_if_not_exists):
+def _get_path(out_dir: Path, create_if_not_exists: bool) -> Path:
     requests_path = Path(out_dir)
     if not requests_path.exists() and create_if_not_exists:
         requests_path.mkdir(parents=True)
       
     return requests_path
 
-def _get_url(img_name, size=600):
+# TODO: move size
+def _get_url(img_name: str, size: int = 600) -> str:
     # TODO: img.oldest_file_info.url might have the same information
     url_prefix = "https://upload.wikimedia.org/wikipedia/commons/thumb/"
     md5 = hashlib.md5(img_name.encode('utf-8')).hexdigest()
@@ -75,12 +80,12 @@ def _get_url(img_name, size=600):
         
     return url
 
-def _get_description(img):
+def _get_description(img: Page) -> str:
     parser = _MyHTMLParser()
     parser.feed(img.getImagePageHtml())
     return parser.get_description().replace("\n", "")
 
-def _get_img_path(img, img_dir):
+def _get_img_path(img: Page, img_dir: Path) -> Tuple[str, Path, Path]:
     img_name = unquote(img.title(with_ns=False, as_url=True))
     img_name_valid = hashlib.md5(img_name.encode('utf-8')).hexdigest()  
     img_path = img_dir / (img_name_valid + ".jpg")
@@ -88,7 +93,9 @@ def _get_img_path(img, img_dir):
         
     return img_name, img_path, img_path_orig
 
-def _single_img_download(img, img_dir, params):
+def _single_img_download(
+    img: Page, img_dir: Path, params: QueryParams
+) -> Tuple[bool, str]:
     img_name, img_path, img_path_orig = _get_img_path(img, img_dir)
     if not _valid_img_type(img_name, params.early_icons_removal):
         if img_path.exists():
@@ -111,14 +118,16 @@ def _single_img_download(img, img_dir, params):
         img.download(filename=img_path_orig, chunk_size=8*1024)
         return (True, img_path_orig.name)
 
-def _remove_invalid_imgs(img_dir):
+def _remove_invalid_imgs(img_dir: Path) -> None:
     files = [img_dir/f for f in listdir(img_dir) if isfile(join(img_dir, f))]
     for fpath in files:
         if stat(fpath).st_size == 0:
             print("Removing corrupted image", fpath)
             fpath.unlink()
     
-def _remove_obsolete_imgs(img_dir, img_links, params):
+def _remove_obsolete_imgs(
+    img_dir: Path, img_links: PageGenerator, params: QueryParams
+) -> None:
     uptodate_imgs = [_get_img_path(img, img_dir) for img in img_links]
     icon_removal = params.early_icons_removal
     img_names = (
@@ -141,10 +150,11 @@ def _remove_obsolete_imgs(img_dir, img_links, params):
     uptodate_meta = [x for x in meta['img_meta'] if x['filename'] in img_names]
     if len(meta['img_meta']) != len(uptodate_meta):
         print("META", img_dir)
-        meta_json = json.dumps({"img_meta": uptodate_meta})
-        _dump(meta_path, meta_json)
+        _dump(meta_path, {"img_meta": uptodate_meta})
         
-def _is_meta_outdated(meta_path, img_links, params):
+def _is_meta_outdated(
+    meta_path: Path, img_links: PageGenerator, params: QueryParams
+) -> bool:
     if not meta_path.exists():
         return True
 
@@ -164,7 +174,9 @@ def _is_meta_outdated(meta_path, img_links, params):
     return res
     
 
-def _img_download(img_links, page_dir, params, tc, uc):
+def _img_download(
+    img_links: PageGenerator, page_dir: Path, params: QueryParams, tc: int, uc: int
+) -> Tuple[int, int]:
     if params.invalidate_cache.img_cache:
         shutil.rmtree(page_dir/"img", ignore_errors=True)
         
@@ -201,17 +213,18 @@ def _img_download(img_links, page_dir, params, tc, uc):
                     meta[-1]['description'] = description
           
     if download_meta:
-        meta_json = json.dumps({"img_meta": meta})
-        _dump(meta_path, meta_json)
+        _dump(meta_path, {"img_meta": meta})
     
     return (tc, uc)
 
-def _remove_prefix(text, prefix):
+def _remove_prefix(text: str, prefix: str) -> str:
     if text.startswith(prefix):
         return text[len(prefix):]
     return text
 
-def _get_image_captions(page_html, language_code, debug_info):
+def _get_image_captions(
+    page_html: str, language_code: str, debug_info: bool
+) -> List[Tuple[str, str]]:
     res = []
     soup = BeautifulSoup(page_html, 'html.parser')
     for div in soup.findAll("div", {"class": "thumbcaption"}):
@@ -228,7 +241,14 @@ def _get_image_captions(page_html, language_code, debug_info):
         res.append((filename, div.text))
     return res
 
-def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_info):
+def _parse_caption_with_js(
+    driver: WebDriver,
+    language_code: str,
+    page_id: str,
+    img_id: str,
+    icons: Set[str],
+    debug_info: bool
+) -> Optional[str]:
     caption = None
     if img_id in _KNOWN_ICONS or img_id in icons:
         if debug_info: print('Skipping known icon', img_id)
@@ -263,11 +283,11 @@ def _parse_caption_with_js(driver, language_code, page_id, img_id, icons, debug_
     return caption
 
 def _query_img_captions_from_article(
-    page_dir,
-    invalidate_cache=False,
-    language_code='en',
-    debug_info=False,
-):           
+    page_dir: Path,
+    invalidate_cache: bool = False,
+    language_code: str = 'en',
+    debug_info: bool = False,
+) -> None:
     meta_path = join(page_dir, 'img', 'meta.json')
     meta_arr = _getJSON(meta_path)['img_meta']
 
@@ -299,24 +319,24 @@ def _query_img_captions_from_article(
             meta_arr[i]['caption'] = caption
             meta_arr[i]['is_icon'] = False # preview only applies to not-icons
             
-    _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+    _dump(meta_path, {"img_meta": meta_arr})
 
 # Time-consuming but exhoustive fetching of image captions. On the other hand,
 # fetch_meta_captions_fast is a fast alternative, although it misses around 20% of labels
 def _query_img_captions_from_preview(
-    page_dir,
-    driver,
-    icons,
-    language_code='en',
-    debug_info=False
-):
+    page_dir: Path,
+    driver: WebDriver,
+    icons: Set[str],
+    language_code: str = 'en',
+    debug_info: bool = False,
+) -> None:
     img_dir = _get_path(page_dir/"img", create_if_not_exists=False)
     meta_path = img_dir / 'meta.json'
     meta_arr = _getJSON(meta_path)['img_meta']
         
     page_id = basename(page_dir)
     if page_id == '':
-        page_id = basename(page_dir[:-1])
+        page_id = basename(str(page_dir)[:-1])
 
     for i, meta in enumerate(meta_arr):
         img_title = meta['title']
@@ -353,7 +373,7 @@ def _query_img_captions_from_preview(
         if caption and caption_match_description:
             meta_arr[i]['caption'] = caption
             
-    _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+    _dump(meta_path, {"img_meta": meta_arr})
 
 # This function is firstly trying to parse as many captions as possible with 
 # a fast but unreliable approach. After that, it gathers all remaining captions
@@ -364,8 +384,13 @@ def _query_img_captions_from_preview(
 # whether image has a preview. Also, when caption matches description, we will
 # not record caption
 def _query_img_captions(
-    page_dir, driver, icons, language_code='en', invalidate_cache=False, debug_info=False
-):
+    page_dir: Path,
+    driver: WebDriver,
+    icons: Set[str],
+    language_code: str = 'en',
+    invalidate_cache: bool = False,
+    debug_info: bool = False,
+) -> None:
     if debug_info:
         print("\nQuerying available captions with fast approach")
 
@@ -482,7 +507,7 @@ def query(filename: str, params: QueryParams) -> None:
     pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
     limit = _validated_limit(params.limit, params.offset, len(pages))
 
-    icons = set()
+    icons: Set[str] = set()
 
     # TODO: don't execute driver when fill_captions=Flase
     options = Options()
@@ -529,7 +554,7 @@ def query(filename: str, params: QueryParams) -> None:
                 response = urllib.request.urlopen(p.full_url())
                 page_json["html"] = response.read().decode("utf-8")
              
-            _dump(text_path, json.dumps(page_json))
+            _dump(text_path, page_json)
             
         # downloading page images
         tc, uc = _img_download(p.imagelinks(), page_dir, params, tc, uc)
@@ -549,4 +574,4 @@ def query(filename: str, params: QueryParams) -> None:
 
     icons_json = _getJSON(_KNOWN_ICONS_PATH)
     updated_icons = icons.union(icons_json['known_icons'])
-    _dump(_KNOWN_ICONS_PATH, json.dumps({"known_icons": list(updated_icons)}))
+    _dump(_KNOWN_ICONS_PATH, {"known_icons": list(updated_icons)})

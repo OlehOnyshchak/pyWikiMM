@@ -6,10 +6,8 @@ import shutil
 import re
 import os
 
-from utils import (
-    _getJSON, _dump, _get_translated_file_label, _valid_img_type, _validated_limit
-)
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from pathlib import Path
 from os import listdir, mkdir
 from os.path import isfile, isdir, join, exists, abspath
@@ -19,9 +17,17 @@ from sklearn.model_selection import train_test_split
 from redditscore.tokenizer import CrazyTokenizer
 from urllib.parse import unquote
 from abc import ABC, abstractmethod
-from typing import Union, List, Dict, Tuple, Sequence
+from typing import Union, List, Dict, Tuple, Sequence, Callable, Any
+from utils import (
+    _getJSON,
+    _dump,
+    _get_translated_file_label,
+    _valid_img_type,
+    _validated_limit,
+    JSONSerializableType,
+)
 
-def _is_valid_img_src(img_src, lang):
+def _is_valid_img_src(img_src: str, lang: str) -> bool:
     special_img = '//{}.wikipedia.org/wiki/Special:CentralAutoLogin/start?type=1x1'.format(lang)
     # TODO: check if we can or need to work out with maps
     return (
@@ -33,7 +39,7 @@ def _is_valid_img_src(img_src, lang):
         and not img_src.startswith('//upload.wikimedia.org/score/')
     )
 
-def _get_img_name(img_src, lang):
+def _get_img_name(img_src: str, lang: str) -> str:
     COMMONS_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/thumb/'
     COMMONS_NO_THUMB_IMG_SRC = '//upload.wikimedia.org/wikipedia/commons/'
     WIKI_IMG_SRC = '//upload.wikimedia.org/wikipedia/{}/thumb/'.format(lang)
@@ -63,7 +69,7 @@ def _get_img_name(img_src, lang):
         
     return unquote(_get_img_name_common(offset))
 
-def _get_heading_text(tag_element):
+def _get_heading_text(tag_element: Tag) -> str:
     text = tag_element.text.strip()
     # TODO: check if that could be done more reliable and whether nested brackets
     # are possible
@@ -71,7 +77,7 @@ def _get_heading_text(tag_element):
         text = text[:text.rfind('[')]
     return text
 
-def _get_headings(tag_element):
+def _get_headings(tag_element: Tag) -> List[str]:
     res = []
     arr = [
         (x.name, _get_heading_text(x))
@@ -89,7 +95,7 @@ def _get_headings(tag_element):
         
     return res
 
-def _get_image_headings(page_html, lang):
+def _get_image_headings(page_html: str, lang: str) -> Dict[str, List[str]]:
     soup = BeautifulSoup(page_html, 'html.parser')
     
     res = {}
@@ -103,7 +109,9 @@ def _get_image_headings(page_html, lang):
     
     return res
 
-def _parse_img_headings(page_dir, invalidate_cache, language_code):
+def _parse_img_headings(
+    page_dir: str, invalidate_cache: bool, language_code: str
+) -> None:
     meta_path = join(page_dir, 'img', 'meta.json')
     meta_arr = _getJSON(meta_path)['img_meta']
 
@@ -130,26 +138,22 @@ def _parse_img_headings(page_dir, invalidate_cache, language_code):
         # TODO: not update when invalidate_cache=False even though we already queried
         meta_arr[i]['headings'] = headings
             
-    _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+    _dump(meta_path, {"img_meta": meta_arr})
 
 ################################################################################
 # Public Interface
 ################################################################################
 
-JSONPrimiteType = Union[str, int, float, bool, None]
-JSONCompoundType = Union[JSONPrimiteType, Sequence[JSONPrimiteType], Tuple[JSONPrimiteType]]
-JSONType = Union[JSONCompoundType, Dict[str, JSONCompoundType]]
-
 class IMapper(ABC):
     @abstractmethod
-    def map(self, img_path: str) -> JSONType:
+    def map(self, img_path: str) -> JSONSerializableType:
         ...
 
 class ResNet152Mapper(IMapper):
     def __init__(self):
         self.model = ResNet152(weights='imagenet', include_top=False)
 
-    def map(self, img_path: str) -> JSONType:
+    def map(self, img_path: str) -> JSONSerializableType:
         img = image.load_img(img_path, target_size=None)
 
         img_data = image.img_to_array(img)
@@ -161,7 +165,7 @@ class ResNet152Mapper(IMapper):
         return features
 
     @staticmethod
-    def _global_max_pool_1D(tensor: np.ndarray) -> Sequence[float]:
+    def _global_max_pool_1D(tensor: np.ndarray) -> List[float]:
         _,_,_,size = tensor.shape
         return [tensor[:,:,:,i].max() for i in range(size)]
 
@@ -198,18 +202,23 @@ def generate_visual_features(
                 print("ERROR: exception for image", img_path, '|||', str(e))
                 continue
                 
-        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+        _dump(meta_path, {"img_meta": meta_arr})
         
 def filter_img_metadata(
-    data_path, predicate, field_to_remove, offset=0, limit=None, debug_info=False
-):
+    data_path: str,
+    predicate: Callable[[Dict[str, Any]], bool],
+    field_to_remove: str,
+    offset: int = 0,
+    limit: int = None,
+    debug_info: bool = False,
+) -> None:
     article_paths = [
         join(data_path, f)
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
 
-    limit = _validated_limit(limit, offset, len(article_paths))
-    for i in range(offset, offset + limit):
+    valid_limit = _validated_limit(limit, offset, len(article_paths))
+    for i in range(offset, offset + valid_limit):
         path = article_paths[i]
         if debug_info: print(i, path)
     
@@ -221,22 +230,26 @@ def filter_img_metadata(
             # useless fields since now it always the same
             x.pop(field_to_remove, None)
                 
-        _dump(meta_path, json.dumps({"img_meta": meta_arr_filtered}))
+        _dump(meta_path, {"img_meta": meta_arr_filtered})
 
 def tokenize_image_titles(
-    data_path, offset=0, limit=None, invalidate_cache=False, debug_info=False
-):
+    data_path: str,
+    offset: int = 0,
+    limit: int = None,
+    invalidate_cache: bool = False,
+    debug_info: bool = False,
+) -> None:
     article_paths = [
         join(data_path, f) 
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = _validated_limit(limit, offset, len(article_paths))
+    valid_limit = _validated_limit(limit, offset, len(article_paths))
     tokenizer = CrazyTokenizer(hashtags='split')
     mapper = str.maketrans({x: '' for x in string.punctuation})
     regex = re.compile(r'(\d+)')
 
-    for i in range(offset, offset + limit):
+    for i in range(offset, offset + valid_limit):
         path = article_paths[i]
         if debug_info: print(i, path)
     
@@ -260,26 +273,26 @@ def tokenize_image_titles(
             
             meta['parsed_title'] = " ".join(tokens)
                 
-        _dump(meta_path, json.dumps({"img_meta": meta_arr}))
+        _dump(meta_path, {"img_meta": meta_arr})
 
 
 # Parses image headings from the article. That is, updates @headings field of
 # image metadata, which is a list containing all available headings from h1 to h6
 def parse_image_headings(
-    data_path,
-    offset=0,
-    limit=None,
-    invalidate_cache=False,
-    debug_info=False,
-    language_code='en'
-):
+    data_path: str,
+    offset: int = 0,
+    limit: int = None,
+    invalidate_cache: bool = False,
+    debug_info: bool = False,
+    language_code: str = 'en',
+) -> None:
     article_paths = [
         join(data_path, f) 
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = _validated_limit(limit, offset, len(article_paths))
-    for i in range(offset, offset + limit):
+    valid_limit = _validated_limit(limit, offset, len(article_paths))
+    for i in range(offset, offset + valid_limit):
         path = article_paths[i]
         if debug_info: print(i, path)
     
