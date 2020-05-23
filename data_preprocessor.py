@@ -18,24 +18,8 @@ from keras.applications.resnet import ResNet152, preprocess_input
 from sklearn.model_selection import train_test_split
 from redditscore.tokenizer import CrazyTokenizer
 from urllib.parse import unquote
-
-def _global_max_pool_1D(tensor):
-    _,_,_,size = tensor.shape
-    return [tensor[:,:,:,i].max() for i in range(size)]
-
-def _get_image_features(model, img_path):
-    img = image.load_img(img_path, target_size=None)
-
-    img_data = image.img_to_array(img)
-    img_data = np.expand_dims(img_data, axis=0)
-    img_data = preprocess_input(img_data)
-
-    feature_tensor = model.predict(img_data)
-    get_img_id = lambda p: p.split('/')[-1].split('.')[0]
-    return {
-        "id": get_img_id(img_path),
-        "features": _global_max_pool_1D(feature_tensor),
-    }
+from abc import ABC, abstractmethod
+from typing import Union, List, Dict, Tuple, Sequence
 
 def _is_valid_img_src(img_src, lang):
     special_img = '//{}.wikipedia.org/wiki/Special:CentralAutoLogin/start?type=1x1'.format(lang)
@@ -152,23 +136,52 @@ def _parse_img_headings(page_dir, invalidate_cache, language_code):
 # Public Interface
 ################################################################################
 
+JSONPrimiteType = Union[str, int, float, bool, None]
+JSONCompoundType = Union[JSONPrimiteType, Sequence[JSONPrimiteType], Tuple[JSONPrimiteType]]
+JSONType = Union[JSONCompoundType, Dict[str, JSONCompoundType]]
+
+class IMapper(ABC):
+    @abstractmethod
+    def map(self, img_path: str) -> JSONType:
+        ...
+
+class ResNet152Mapper(IMapper):
+    def __init__(self):
+        self.model = ResNet152(weights='imagenet', include_top=False)
+
+    def map(self, img_path: str) -> JSONType:
+        img = image.load_img(img_path, target_size=None)
+
+        img_data = image.img_to_array(img)
+        img_data = np.expand_dims(img_data, axis=0)
+        img_data = preprocess_input(img_data)
+
+        feature_tensor = self.model.predict(img_data)
+        features = ResNet152Mapper._global_max_pool_1D(feature_tensor)
+        return features
+
+    @staticmethod
+    def _global_max_pool_1D(tensor: np.ndarray) -> Sequence[float]:
+        _,_,_,size = tensor.shape
+        return [tensor[:,:,:,i].max() for i in range(size)]
+
 def generate_visual_features(
-    data_path,
-    offset=0,
-    limit=None,
-    model=None,
-    invalidate_cache=False,
-    debug_info=False
-):
+    data_path: str,
+    offset: int = 0,
+    limit: int = None,
+    mapper: IMapper = None,
+    invalidate_cache: bool = False,
+    debug_info: bool = False,
+) -> None:
     article_paths = [
         join(data_path, f) 
         for f in listdir(data_path) if isdir(join(data_path, f))
     ]
     
-    limit = _validated_limit(limit, offset, len(article_paths))
-    model = model if model else ResNet152(weights='imagenet', include_top=False) 
+    valid_limit = _validated_limit(limit, offset, len(article_paths))
+    mapper = mapper if mapper else ResNet152Mapper() 
     
-    for i in range(offset, offset + limit):
+    for i in range(offset, offset + valid_limit):
         path = article_paths[i]
         if debug_info: print(i, path)
     
@@ -180,8 +193,7 @@ def generate_visual_features(
                 
             img_path =  join(path, 'img/', meta['filename'])
             try:
-                features = _get_image_features(model, img_path)['features']
-                meta['features'] = [str(f) for f in features]
+                meta['features'] = mapper.map(img_path)
             except Exception as e:
                 print("ERROR: exception for image", img_path, '|||', str(e))
                 continue
