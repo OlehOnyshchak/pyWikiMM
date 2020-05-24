@@ -1,3 +1,4 @@
+# from __future__ import annotations  # optional, uncomment if py.version >= 3.7
 import pywikibot
 import json
 import hashlib
@@ -7,7 +8,6 @@ import shutil
 import time
 import urllib.request
 
-from __future__ import annotations 
 from pathlib import Path
 from pywikibot import pagegenerators, Page
 from pywikibot.data.api import PageGenerator

@@ -1,3 +1,4 @@
+# from __future__ import annotations  # optional, uncomment if py.version >= 3.7
 import pandas as pd
 import numpy as np
 import string
@@ -167,7 +168,7 @@ class ResNet152Mapper(IMapper):
     @staticmethod
     def _global_max_pool_1D(tensor: np.ndarray) -> List[float]:
         _,_,_,size = tensor.shape
-        return [tensor[:,:,:,i].max() for i in range(size)]
+        return [float(tensor[:,:,:,i].max()) for i in range(size)]
 
 def generate_visual_features(
     data_path: str,

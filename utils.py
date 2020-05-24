@@ -1,8 +1,8 @@
+# from __future__ import annotations  # optional, uncomment if py.version >= 3.7
 import json
 import pathlib
 import mwparserfromhell as mwp
 from typing import Tuple, Sequence, Union, Dict, Optional, Any
-from __future__ import annotations
 
 pathlike = Union[str, pathlib.Path]
 
