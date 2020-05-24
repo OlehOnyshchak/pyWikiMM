@@ -7,15 +7,16 @@ from pywikimm import preprocessor
 ################################################################################
 
 # TODO: change the filepath to your input file, if needed
-filename = 'input.txt'
-out_dir = 'data/'
-
+filename = 'docker_input.txt'
 invalidate_headings_cache = False
 invalidate_parsed_titles_cache = False
 invalidate_visual_features_cache = False
 
 query_params = reader.QueryParams(
-    out_dir = out_dir,
+    # if you need to change out_dir, please do so via docker run params.
+    # this path is relative to image filesystem and should stay the same.
+    # for more details please refer to installation guide in repo.
+    out_dir = 'data/',
     debug_info = True,
     offset = 0,
     limit = 5,
