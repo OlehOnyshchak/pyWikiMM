@@ -8,8 +8,10 @@ USER $USER:$USER
 
 WORKDIR /home/$USER
 
-# copy all files from current directory
+# copy all files from current directory (we don't want to copy collected data)
 COPY --chown=$USER:$USER ./*\.* ./
+
+COPY --chown=$USER:$USER ./pywikimm ./pywikimm
 
 # install pip
 RUN sudo apt-get update && sudo apt-get -y install python3-pip
