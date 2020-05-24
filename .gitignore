@@ -1,0 +1,6 @@
+.ipynb_checkpoints/
+apicache-py3/
+geckodriver.log
+pywikibot.lwp
+throttle.ctrl
+__pycache__/
