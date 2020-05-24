@@ -1,4 +1,4 @@
-from __future__ import annotations  # optional, uncomment if py.version >= 3.7
+# from __future__ import annotations  # optional, uncomment if py.version >= 3.7
 import pywikibot
 import json
 import hashlib

@@ -2,6 +2,8 @@ FROM selenium/node-firefox:3.141.59-20200409
 
 ENV USER=seluser
 
+ENV PATH="${PATH}:/home/${USER}/.local/bin"
+
 USER $USER:$USER
 
 WORKDIR /home/$USER
