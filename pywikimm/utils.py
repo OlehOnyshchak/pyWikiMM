@@ -3,6 +3,7 @@ import json
 import pathlib
 import mwparserfromhell as mwp
 from typing import Tuple, Sequence, Union, Dict, Optional, Any
+from pywikimm import _KNOWN_ICONS_PATH, _KNOWN_ICONS
 
 pathlike = Union[str, pathlib.Path]
 
@@ -13,9 +14,6 @@ def _getJSON(path: pathlike) -> "JSONType":
 def _dump(path: pathlike, data: "JSONType") -> None:
     with open(path, 'w', encoding='utf8') as outfile:
         json.dump(json.dumps(data), outfile, indent=2, ensure_ascii=False)
-
-_KNOWN_ICONS_PATH = 'known_icons.json'
-_KNOWN_ICONS = set(_getJSON(_KNOWN_ICONS_PATH)['known_icons'])
 
 def _valid_img_type(img_name: str, early_icon_removal: bool = False) -> bool:
     if early_icon_removal and img_name in _KNOWN_ICONS:

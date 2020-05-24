@@ -19,7 +19,7 @@ from redditscore.tokenizer import CrazyTokenizer
 from urllib.parse import unquote
 from abc import ABC, abstractmethod
 from typing import Union, List, Dict, Tuple, Sequence, Callable, Any
-from utils import (
+from pywikimm.utils import (
     _getJSON,
     _dump,
     _get_translated_file_label,

@@ -24,7 +24,7 @@ from selenium.webdriver.firefox.webdriver import WebDriver
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
 from typing import Set, Optional, List, Tuple
-from utils import (
+from pywikimm.utils import (
     _getJSON,
     _dump,
     _get_translated_file_label,
@@ -511,7 +511,7 @@ class QueryParams:
 # would be "The_Relapse". Please note, that all article ids you specified in a 
 # file should be from the same Wikipedia, i.e. either all English or all Ukrainian.
 def query(filename: str, params: QueryParams) -> None:   
-    site = pywikibot.Site(params.language_code)    
+    site = pywikibot.Site(code=params.language_code, fam='wikipedia', user='pywikimm')    
     pages = list(pagegenerators.TextfilePageGenerator(filename=filename, site=site))
     limit = _validated_limit(params.limit, params.offset, len(pages))
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import reader
-import preprocessor
+from pywikimm import reader
+from pywikimm import preprocessor
 
 ################################################################################
 ## Please refer to data_collection_demo.ipynb for documentation
