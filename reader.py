@@ -1,4 +1,4 @@
-# from __future__ import annotations  # optional, uncomment if py.version >= 3.7
+from __future__ import annotations  # optional, uncomment if py.version >= 3.7
 import pywikibot
 import json
 import hashlib
@@ -66,7 +66,6 @@ def _get_path(out_dir: Path, create_if_not_exists: bool) -> Path:
       
     return requests_path
 
-# TODO: move size
 def _get_url(img_name: str, size: int = 600) -> str:
     # TODO: img.oldest_file_info.url might have the same information
     url_prefix = "https://upload.wikimedia.org/wikipedia/commons/thumb/"
@@ -94,7 +93,7 @@ def _get_img_path(img: Page, img_dir: Path) -> Tuple[str, Path, Path]:
     return img_name, img_path, img_path_orig
 
 def _single_img_download(
-    img: Page, img_dir: Path, params: QueryParams
+    img: Page, img_dir: Path, params: "QueryParams"
 ) -> Tuple[bool, str]:
     img_name, img_path, img_path_orig = _get_img_path(img, img_dir)
     if not _valid_img_type(img_name, params.early_icons_removal):
@@ -111,7 +110,7 @@ def _single_img_download(
     
     if params.debug_info: print('Downloading image', img_name)
     try:
-        urlretrieve(_get_url(img_name), img_path)
+        urlretrieve(_get_url(img_name, params.img_width), img_path)
         return (True, img_path.name) 
     except Exception as e:
         print(str(e))
@@ -126,7 +125,7 @@ def _remove_invalid_imgs(img_dir: Path) -> None:
             fpath.unlink()
     
 def _remove_obsolete_imgs(
-    img_dir: Path, img_links: PageGenerator, params: QueryParams
+    img_dir: Path, img_links: PageGenerator, params: "QueryParams"
 ) -> None:
     uptodate_imgs = [_get_img_path(img, img_dir) for img in img_links]
     icon_removal = params.early_icons_removal
@@ -153,7 +152,7 @@ def _remove_obsolete_imgs(
         _dump(meta_path, {"img_meta": uptodate_meta})
         
 def _is_meta_outdated(
-    meta_path: Path, img_links: PageGenerator, params: QueryParams
+    meta_path: Path, img_links: PageGenerator, params: "QueryParams"
 ) -> bool:
     if not meta_path.exists():
         return True
@@ -175,7 +174,11 @@ def _is_meta_outdated(
     
 
 def _img_download(
-    img_links: PageGenerator, page_dir: Path, params: QueryParams, tc: int, uc: int
+    img_links: PageGenerator,
+    page_dir: Path,
+    params: "QueryParams",
+    tc: int,
+    uc: int
 ) -> Tuple[int, int]:
     if params.invalidate_cache.img_cache:
         shutil.rmtree(page_dir/"img", ignore_errors=True)
@@ -490,6 +493,11 @@ class QueryParams:
     # code of Wikipedia language, articles of which specified in @filename list.
     # All articles in @filename should be from a single wikipedia.
     language_code: str = 'en'
+
+    # every image will be downloaded with specified width, while height will be
+    # automatically calculated for each image to preserve the original
+    # height/width ratio
+    img_width: int = 600
 
     # if True, will optimise the collection process to not even download known
     # icons. Remove this flag if you want to get them

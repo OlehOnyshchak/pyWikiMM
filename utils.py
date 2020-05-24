@@ -6,11 +6,11 @@ from typing import Tuple, Sequence, Union, Dict, Optional, Any
 
 pathlike = Union[str, pathlib.Path]
 
-def _getJSON(path: pathlike) -> JSONType:
+def _getJSON(path: pathlike) -> "JSONType":
     with open(path) as json_file:
         return json.loads(json.load(json_file))
     
-def _dump(path: pathlike, data: JSONType) -> None:
+def _dump(path: pathlike, data: "JSONType") -> None:
     with open(path, 'w', encoding='utf8') as outfile:
         json.dump(json.dumps(data), outfile, indent=2, ensure_ascii=False)
 
