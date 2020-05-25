@@ -11,8 +11,8 @@ The most straightforward option to create your dataset is to do it in the cloud.
 ### Docker
 If your dataset is too big to collect it in the cloud, we prepared docker container so that you can easily do it locally. Just follow the instructions below to build and run a docker container:
 ```bash
-$ git clone https://github.com/OlehOnyshchak/WikipediaMultimodalDownloader.git
-$ cd WikipediaMultimodalDownloader/
+$ git clone https://github.com/OlehOnyshchak/pyWikiMM.git
+$ cd pyWikiMM/
 $ echo "Adjust parameters in `main.py` with what and how you want to download"
 $ sudo docker build . -t wiki_downloader:1.0
 $ WIKI_OUT_DIR="/home/oleh/data_docker" # Replace with absolute path to your local folder
