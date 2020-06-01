@@ -4,6 +4,8 @@ Collects a dataset of Wikipedia articles and corresponding images
 ## About
 This is a package to collect and preprocess multimodal(text-images) dataset of Wikipedia articles. Besides collecting article content and its images, it also retrieves a gread deal of metadata such as URI, HTML-snapshot, image caption and descriptions and a lot more. Or you can get our downloaded dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) from [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
 
+![image](doc/res/properties_overview.png)
+
 ## Installation
 If Featured dataset mentioned above does not satisfy your need, you have two options to create your own dataset.
 ### Kaggle
