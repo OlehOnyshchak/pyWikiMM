@@ -492,6 +492,8 @@ class QueryParams:
 
     # code of Wikipedia language, articles of which specified in @filename list.
     # All articles in @filename should be from a single wikipedia.
+    # The code for each language can be found from Wikipedia subdomain, e.g.
+    # for Ukrainian Wikipedia (uk.wikipedia.org) the code will be "uk"
     language_code: str = 'en'
 
     # every image will be downloaded with specified width, while height will be
