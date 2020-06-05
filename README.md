@@ -15,10 +15,10 @@ If your dataset is too big to collect it in the cloud, we prepared docker contai
 ```bash
 $ git clone https://github.com/OlehOnyshchak/pyWikiMM.git
 $ cd pyWikiMM/
-$ echo "Adjust parameters in `main.py` with what and how you want to download"
-$ sudo docker build . -t wiki_downloader:1.0
+$ echo "Adjust parameters in `docker_main.py` with what and how you want to download"
+$ sudo docker build . -t pywikimm:1.0
 $ WIKI_OUT_DIR="/home/oleh/data_docker" # Replace with absolute path to your local folder
-$ sudo docker run -v $WIKI_OUT_DIR:/home/seluser/data wiki_downloader:1.0
+$ sudo docker run -v $WIKI_OUT_DIR:/home/seluser/data pywikimm:1.0
 ```
 Please note, you can avoid using `sudo` if you docker is cofigured to run without it.
 
