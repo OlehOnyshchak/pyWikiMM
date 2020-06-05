@@ -16,33 +16,34 @@ $ git clone https://github.com/OlehOnyshchak/pyWikiMM.git
 $ cd pyWikiMM/
 $ echo "Adjust parameters in `docker_main.py` with what and how you want to download"
 $ sudo docker build . -t pywikimm:1.0
-$ WIKI_OUT_DIR="/home/oleh/data_docker" # Replace with absolute path to your local folder
+$ WIKI_OUT_DIR="/home/oleh/data_docker" # Replace with absolute path to your existing empty local folder
 $ sudo docker run -v $WIKI_OUT_DIR:/home/seluser/data pywikimm:1.0
 ```
 Please note, you can avoid using `sudo` if you docker is cofigured to run without it.
 
 ## Main Features
-* given list of articles as an input, downloads their content with images, enrich with a lot of metadata
-* functionality extensively support cached data. So if you need to update some specific parts of your dataset, it would be done in almost optimal way
-* supports all languages. You can specify Wikipedia language as an input parameter.
+* given list of articles as an input, downloads their content with images and a lot of metadata for both modalities.
+* support for cached data. So if you need to update some specific parts of your dataset, it would be done very efficiently.
+* property selection. You can specify what features you want to collect to optimise your resource usage.
+* support for any language. You can specify Wikipedia language as an input parameter.
 
 ## Library Structure
-+-- pywikimm/
-    +-- reader.py  # data collection
-    +-- preprocessor.py # generating additional data
-    +-- utils.py  # common utility functions
+    +-- pywikimm/
+        +-- reader.py  # data collection
+        +-- preprocessor.py # generating additional data
+        +-- utils.py  # common utility functions
 
 ## Dataset structure
 The high-level structure of the dataset is as follows:
-
-+-- out_dir/
-    +-- articleK/
-    |   +-- text.json  
-    |   +-- img/  
-    |       +-- meta.json
-    |       +-- img1.jpg
-    :       :
-    |       +-- imgM.jpg
+ 
+    +-- out_dir/
+        +-- articleK/
+        |   +-- text.json  
+        |   +-- img/  
+        |       +-- meta.json
+        |       +-- img1.jpg
+        :       :
+        |       +-- imgM.jpg
        
 
 label      | description
@@ -106,13 +107,11 @@ caption       | caption of an image parsed from Wikipedia article, if available
 headings      | list of all parent headings of image in Wikipedia article. The first element is a top-most heading
 features      | output of 5-th convolutional layer of ResNet152 trained on ImageNet dataset. That output of shape (19, 24, 2048) is then max-pooled to a shape (2048,). Features taken from original images downloaded in `jpeg` format with fixed width of 600px. Practically, it is a list of floats with len = 2048
 
-## Further Reading
-This project was developed as a part of ["Image Recommendation for Wikipedia Articles"](http://dx.doi.org/10.13140/RG.2.2.17463.27042) thesis, so you can find more context as well as application of this downloader there.
-
 ## Acknowledgments
 Special thanks to [Miriam Redi](http://www.visionresearchwitch.com/) for actively mentoring me in this project.
 
 ## Additional Resources 
 * downloaded sample dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) hosted on [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
+
 ## Feedback is a Gift
 If you were interacting with this library, please do share your feedback. If something isn't working, isn't clear or is missing, please open an issue and let me know. Or if you found this library useful, please star this repo or just post a comment into feedback thread in Issues tab. Your comments will help me to improve the project, your starts will help me to identify how useful it is.
