@@ -14,7 +14,7 @@ If your dataset is too big to collect it in the cloud, we prepared docker contai
 ```bash
 $ git clone https://github.com/OlehOnyshchak/pyWikiMM.git
 $ cd pyWikiMM/
-$ echo "Adjust parameters in docker_main.py with what and how you want to download"
+$ echo "Adjust parameters in docker_main.py with your input file"
 $ sudo docker build . -t pywikimm:1.0
 $ WIKI_OUT_DIR="/home/oleh/data_docker" # Replace with absolute path to your existing empty local folder
 $ sudo docker run -v $WIKI_OUT_DIR:/home/seluser/data pywikimm:1.0
