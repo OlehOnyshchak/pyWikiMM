@@ -2,16 +2,15 @@
 Collects a dataset of Wikipedia articles and corresponding images
 
 ## About
-This is a package to collect and preprocess multimodal(text-images) dataset of Wikipedia articles. Besides collecting article content and its images, it also retrieves a gread deal of metadata such as URI, HTML-snapshot, image caption and descriptions and a lot more. Or you can get our downloaded dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) from [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
+Here we introduce pyWikiMM, a python library which generates structured multimodal datasets for specified Wikipedia articles in any language. The library allows to efficiently collect Wikipedia articles' text, images with captions and visual features, and metadata for both modalities. This results in very large multimodal datasets with fine-grained semantics and multilingual content. This data can be used to extend existing cross-modal learning datasets, or to explore novel multimedia research directions, thus hopefully contributing to widen the scope and improve accuracy and inclusiveness of multimedia models and applications.
 
 ![image](doc/res/properties_overview.png)
 
 ## Installation
-If Featured dataset mentioned above does not satisfy your need, you have two options to create your own dataset.
 ### Kaggle
-The most straightforward option to create your dataset is to do it in the cloud. In that case, you can just fork our [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment at all. In the end, you will simply download the collected dataset.
+The most straightforward option to create your dataset is to do it in the cloud. In that case, you can just fork our [Kaggle Notebook](https://www.kaggle.com/jacksoncrow/data-collection-demo) to avoid dealing with setting up the environment at all. In the end, you will simply download the collected dataset. Although, this options only viable if your dataset is smaller than 5GB due to Kaggle restriction. Otherwise, please use Docker installation guide for local execution.
 ### Docker
-If your dataset is too big to collect it in the cloud, we prepared docker container so that you can easily do it locally. Just follow the instructions below to build and run a docker container:
+If your dataset is too big to collect it in the cloud, we prepared docker container so that you can easily do it locally. You must have docker [installed](https://docs.docker.com/engine/install/) and currenly this library was only tested on Ubuntu 16.04(although, it should be cross-platform). Just follow the instructions below to build and run a docker container:
 ```bash
 $ git clone https://github.com/OlehOnyshchak/pyWikiMM.git
 $ cd pyWikiMM/
@@ -113,5 +112,7 @@ This project was developed as a part of ["Image Recommendation for Wikipedia Art
 ## Acknowledgments
 Special thanks to [Miriam Redi](http://www.visionresearchwitch.com/) for actively mentoring me in this project.
 
+## Additional Resources 
+* downloaded sample dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) hosted [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
 ## Feedback is a Gift
 If you were interacting with this library, please do share your feedback. If something isn't working, isn't clear or is missing, please open an issue and let me know. Or if you found this library useful, please star this repo or just post a comment into feedback thread in Issues tab. Your comments will help me to improve the project, your starts will help me to identify how useful it is.
