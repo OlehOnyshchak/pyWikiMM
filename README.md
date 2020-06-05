@@ -27,30 +27,31 @@ Please note, you can avoid using `sudo` if you docker is cofigured to run withou
 * functionality extensively support cached data. So if you need to update some specific parts of your dataset, it would be done in almost optimal way
 * supports all languages. You can specify Wikipedia language as an input parameter.
 
+## Library Structure
++-- pywikimm/
+    +-- reader.py  # data collection
+    +-- preprocessor.py # generating additional data
+    +-- utils.py  # common utility functions
+
 ## Dataset structure
 The high-level structure of the dataset is as follows:
 
-    .
-    +-- page1  
++-- out_dir/
+    +-- articleK/
     |   +-- text.json  
-    |   +-- img  
+    |   +-- img/  
     |       +-- meta.json
-    +-- page2  
-    |   +-- text.json  
-    |   +-- img  
-    |       +-- meta.json
-    :  
-    +-- pageN 
-    |   +-- text.json  
-    |   +-- img  
-    |       +-- meta.json
+    |       +-- img1.jpg
+    :       :
+    |       +-- imgM.jpg
+       
 
 label      | description
 ---------  | ----------
 pageN      | is the title of N-th Wikipedia page and contains all information about the page
 text.json  | text of the page saved as JSON. Please refer to the details of JSON schema below.
 meta.json  | a collection of all images of the page. Please refer to the details of JSON schema below.
-imageN     | is the N-th image of an article, saved in `jpg` format where the width of each image is set to 600px. Name of the image is md5 hashcode of original image title. 
+imgM       | is the M-th image of an article, saved in `jpg` format where the default width of each image is set to 600px. Name of the image is md5 hashcode of original image title. 
  
 ### text.JSON Schema
 Below you see an example of how data is stored:
@@ -87,7 +88,7 @@ Please note that @html and @wikitext properties represent the same information i
           "description": "A U.S. destroyer steams up what later became known as ...",
           "caption": "Ironbottom Sound. The majority of the warship surface ...",
           "headings": ['Naval Battle of Guadalcanal', 'First Naval Battle of Guadalcanal', ...],
-          "features": ['4.8618264', '0.49436468', '7.0841103', '2.7377882', '2.1305492', ...],
+          "features": [4.8618264, 0.49436468, 7.0841103, 2.7377882, 2.1305492, ...],
          },
          ...
        ]
