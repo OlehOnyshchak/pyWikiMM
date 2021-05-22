@@ -112,6 +112,7 @@ Special thanks to [Miriam Redi](http://www.visionresearchwitch.com/) for activel
 
 ## Additional Resources 
 * downloaded sample dataset of [Featured Articles](https://en.wikipedia.org/wiki/Wikipedia:Featured_articles) hosted on [Kaggle](https://www.kaggle.com/jacksoncrow/extended-wikipedia-multimodal-dataset)
+* [WikiImageRecommendation](https://github.com/OlehOnyshchak/WikiImageRecommendation) - multimodal lerning model to reccommend relevant images for a Wikipedia article, which was trained on data collected with pyWikiMM library.
 
 ## Feedback is a Gift
 If you were interacting with this library, please do share your feedback. If something isn't working, isn't clear or is missing, please open an issue and let me know. Or if you found this library useful, please star this repo or just post a comment into feedback thread in Issues tab. Your comments will help me to improve the project, your starts will help me to identify how useful it is.
